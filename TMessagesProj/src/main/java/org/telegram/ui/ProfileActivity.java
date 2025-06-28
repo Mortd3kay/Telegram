@@ -364,6 +364,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private FrameLayout avatarContainer2;
     private DrawerProfileCell.AnimatedStatusView animatedStatusView;
     private AvatarImageView avatarImage;
+    private ButtonsGroupView buttonsGroupView;
     private View avatarOverlay;
     private AnimatorSet avatarAnimation;
     private RadialProgressView avatarProgressView;
@@ -1001,6 +1002,296 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             invalidate();
         }
     }
+
+    public enum ButtonType {
+        MESSAGE(R.string.Message, R.drawable.profile_message),
+        UNMUTE(R.string.Unmute, R.drawable.profile_unmute),
+        MUTE(R.string.Mute, R.drawable.profile_mute),
+        CALL(R.string.Call, R.drawable.profile_call),
+        VIDEO(R.string.Video, R.drawable.profile_video_call),
+        SHARE(R.string.Share, R.drawable.profile_share),
+        STOP(R.string.Stop, R.drawable.profile_block),
+        JOIN(R.string.Join, R.drawable.channel_join),
+        REPORT(R.string.Report2, R.drawable.profile_report),
+        LEAVE(R.string.Leave, R.drawable.channel_leave),
+        DISCUSS(R.string.Discuss, R.drawable.profile_message),
+        GIFT(R.string.Gift, R.drawable.profile_gift),
+        LIVE_STREAM(R.string.LiveStream, R.drawable.channel_live_stream),
+        ADD_STORY(R.string.AddStory, R.drawable.profile_add_story),
+        VOICE_CHAT(R.string.VoiceChat, R.drawable.channel_live_stream);
+
+        private final int stringResId;
+        private final int iconResId;
+
+        ButtonType(int stringResId, int iconResId) {
+            this.stringResId = stringResId;
+            this.iconResId = iconResId;
+        }
+
+        public int getStringResId() {
+            return stringResId;
+        }
+
+        public int getIconResId() {
+            return iconResId;
+        }
+    }
+
+    private class ButtonsGroupView extends FrameLayout {
+
+
+        private static final int MAX_BUTTONS = 5;
+        private final ArrayList<ButtonType> buttons = new ArrayList<>();
+        private float progressToExpand;
+        private final Paint backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF buttonRect = new RectF();
+        private float baseBackgroundAlpha = 0.10f;
+        private float disabledContentAlpha = 0.5f;
+        private int pressedButtonIndex = -1;
+        private int clickedButtonIndex = -1;
+
+        public ButtonsGroupView(Context context) {
+            super(context);
+            setWillNotDraw(false);
+            backgroundPaint.setColor(Color.BLACK);
+            textPaint.setColor(Color.WHITE);
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            progressToExpand = 1.0f;
+        }
+
+        public void setButtons(ArrayList<ButtonType> types) {
+            buttons.clear();
+            if (types != null) {
+                for (int i = 0; i < Math.min(types.size(), MAX_BUTTONS); i++) {
+                    ButtonType buttonType = types.get(i);
+                    if (buttonType != null) {
+                        buttons.add(buttonType);
+                    }
+                }
+            }
+            requestLayout();
+            invalidate();
+        }
+
+
+        public void setProgressToExpand(float progress) {
+            if (progressToExpand == progress) {
+                return;
+            }
+            progressToExpand = Math.max(0f, Math.min(1f, progress));
+            invalidate();
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            int width = MeasureSpec.getSize(widthMeasureSpec);
+            int buttonCount = getVisibleButtonCount();
+
+            if (buttonCount == 0) {
+                setMeasuredDimension(width, 0);
+                return;
+            }
+
+            int maxButtonHeight = AndroidUtilities.dp(56);
+            int minButtonHeight = AndroidUtilities.dp(20);
+            int currentHeight = (int) (minButtonHeight + (maxButtonHeight - minButtonHeight) * progressToExpand);
+            setMeasuredDimension(width, currentHeight);
+        }
+
+        private int getVisibleButtonCount() {
+            return buttons.size();
+        }
+
+        @Override
+        protected void onDraw(@NonNull Canvas canvas) {
+            super.onDraw(canvas);
+
+            int buttonCount = getVisibleButtonCount();
+            if (buttonCount == 0 || progressToExpand <= 0) {
+                return;
+            }
+
+            int width = getMeasuredWidth();
+
+            int buttonSpacing = AndroidUtilities.dp(8);
+            int sideMargin = AndroidUtilities.dp(12);
+            int totalSpacing = (buttonCount - 1) * buttonSpacing + 2 * sideMargin;
+            int buttonWidth = (width - totalSpacing) / buttonCount;
+
+            int maxButtonHeight = AndroidUtilities.dp(56);
+            int minButtonHeight = AndroidUtilities.dp(20);
+            int buttonHeight = (int) (minButtonHeight + (maxButtonHeight - minButtonHeight) * progressToExpand);
+
+            int buttonTop = 0;
+
+            int backgroundAlpha = (int) (255 * baseBackgroundAlpha * progressToExpand);
+            backgroundPaint.setAlpha(backgroundAlpha);
+
+            int edgePadding = AndroidUtilities.dp(8);
+            float iconScale = progressToExpand;
+            float textScale = (float) Math.sqrt(progressToExpand);
+            int iconAlpha = (int) (255 * iconScale);
+            int textAlpha = (int) (255 * textScale);
+            int baseIconSize = AndroidUtilities.dp(24);
+            int baseTextSize = AndroidUtilities.dp(11);
+            int iconSize = (int) (baseIconSize * iconScale);
+            int textSize = (int) (baseTextSize * textScale);
+
+            textPaint.setAlpha(textAlpha);
+            textPaint.setTextSize(textSize);
+            Paint.FontMetrics fontMetrics = textPaint.getFontMetrics();
+            int textBaseY = (int) (buttonTop + buttonHeight - edgePadding - fontMetrics.descent);
+
+            int currentX = sideMargin;
+            for (int i = 0; i < buttonCount && i < buttons.size(); i++) {
+                ButtonType buttonType = buttons.get(i);
+                if (buttonType == null) {
+                    currentX += buttonWidth + buttonSpacing;
+                    continue;
+                }
+
+                buttonRect.set(currentX, buttonTop, currentX + buttonWidth, buttonTop + buttonHeight);
+                canvas.drawRoundRect(buttonRect, AndroidUtilities.dp(10), AndroidUtilities.dp(10), backgroundPaint);
+
+                boolean isPressed = i == pressedButtonIndex;
+                int currentIconAlpha = isPressed ? (int) (iconAlpha * disabledContentAlpha) : iconAlpha;
+                int currentTextAlpha = isPressed ? (int) (textAlpha * disabledContentAlpha) : textAlpha;
+
+                if (getContext() != null) {
+                    Drawable icon = ContextCompat.getDrawable(getContext(), buttonType.getIconResId());
+                    if (icon != null) {
+                        icon.setAlpha(currentIconAlpha);
+                        int iconLeft = currentX + (buttonWidth - iconSize) / 2;
+                        int iconTop = buttonTop + edgePadding;
+                        icon.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize);
+                        icon.draw(canvas);
+                    }
+
+                    textPaint.setAlpha(currentTextAlpha);
+                    String buttonText = getContext().getString(buttonType.getStringResId());
+                    if (!buttonText.isEmpty()) {
+                        canvas.drawText(buttonText, currentX + buttonWidth / 2f, textBaseY, textPaint);
+                    }
+                }
+
+                currentX += buttonWidth + buttonSpacing;
+            }
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (event == null || progressToExpand <= 0) {
+                return super.onTouchEvent(event);
+            }
+
+            int action = event.getAction();
+            if (action != MotionEvent.ACTION_DOWN && action != MotionEvent.ACTION_UP && action != MotionEvent.ACTION_CANCEL) {
+                return super.onTouchEvent(event);
+            }
+
+            float x = event.getX();
+            float y = event.getY();
+
+            int buttonCount = getVisibleButtonCount();
+            if (buttonCount == 0) {
+                return super.onTouchEvent(event);
+            }
+
+            int buttonSpacing = AndroidUtilities.dp(8);
+            int sideMargin = AndroidUtilities.dp(12);
+            int totalSpacing = (buttonCount - 1) * buttonSpacing + 2 * sideMargin;
+            int buttonWidth = (getMeasuredWidth() - totalSpacing) / buttonCount;
+
+            int maxButtonHeight = AndroidUtilities.dp(56);
+            int minButtonHeight = AndroidUtilities.dp(20);
+            int buttonHeight = (int) (minButtonHeight + (maxButtonHeight - minButtonHeight) * progressToExpand);
+            int buttonTop = 0;
+
+            int currentX = sideMargin;
+            int buttonIndex = 0;
+
+            for (int i = 0; i < buttons.size() && buttonIndex < buttonCount; i++) {
+                ButtonType buttonType = buttons.get(i);
+                if (buttonType == null) {
+                    currentX += buttonWidth + buttonSpacing;
+                    buttonIndex++;
+                    continue;
+                }
+
+                if (x >= currentX && x <= currentX + buttonWidth &&
+                        y >= buttonTop && y <= buttonTop + buttonHeight) {
+
+                    if (action == MotionEvent.ACTION_DOWN) {
+                        pressedButtonIndex = i;
+                        invalidate();
+                        return true;
+                    } else if (action == MotionEvent.ACTION_UP && pressedButtonIndex == i) {
+                        pressedButtonIndex = -1;
+                        clickedButtonIndex = i;
+                        performClick();
+                        invalidate();
+                        return true;
+                    }
+                }
+
+                currentX += buttonWidth + buttonSpacing;
+                buttonIndex++;
+            }
+
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                if (pressedButtonIndex != -1) {
+                    pressedButtonIndex = -1;
+                    invalidate();
+                }
+            }
+
+            return super.onTouchEvent(event);
+        }
+
+        public void setBackgroundAlpha(float alpha) {
+            baseBackgroundAlpha = Math.max(0f, Math.min(1f, alpha));
+            invalidate();
+        }
+
+        public void setBackgroundColor(int color) {
+            backgroundPaint.setColor(color);
+            invalidate();
+        }
+
+        public void setContentColor(int color) {
+            textPaint.setColor(color);
+            invalidate();
+        }
+
+        public void setDisabledContentAlpha(float alpha) {
+            disabledContentAlpha = Math.max(0f, Math.min(1f, alpha));
+        }
+
+        @Override
+        public boolean performClick() {
+            super.performClick();
+
+            if (clickedButtonIndex >= 0 && clickedButtonIndex < buttons.size()) {
+                ButtonType buttonType = buttons.get(clickedButtonIndex);
+                if (buttonType != null) {
+                    onButtonClick(buttonType);
+                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                }
+                clickedButtonIndex = -1;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void onButtonClick(ButtonType buttonType) {
+            if (buttonType == null || getContext() == null) {
+                return;
+            }
+        }
+    }
+
 
     private class TopView extends FrameLayout {
 

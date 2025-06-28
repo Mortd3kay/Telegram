@@ -3605,6 +3605,14 @@
     <string name="SuggestedPostAcceptTitle">Accept Terms</string>
     <string name="Call">Call</string>
     <string name="VideoCall">Video Call</string>
+    <string name="Video">Video</string>
+    <string name="Share">Share</string>
+    <string name="Join">Join</string>
+    <string name="Leave">Leave</string>
+    <string name="Discuss">Discuss</string>
+    <string name="Gift">Gift</string>
+    <string name="LiveStream">Live Stream</string>
+    <string name="VoiceChat">Voice Chat</string>
     <string name="Copy">Copy</string>
     <string name="Restrict">Restrict</string>
     <string name="Ban">Ban</string>
