@@ -2251,7 +2251,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
             public void onItemClick(final int id) {
-                onClick(id);
+                onClick(id, null);
             }
         });
 
@@ -4681,141 +4681,98 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         giftsView = new ProfileGiftsView(context, currentAccount, getDialogId(), avatarContainer, avatarImage, resourcesProvider);
         avatarContainer2.addView(giftsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         buttonsGroupView = new ButtonsGroupView(context);
-        buttonsGroupView.setOnItemClickListener(this::onClick);
-        buttonsGroupView.setOnSubItemClickListener((itemId, subItemId) -> onClick(subItemId));
-        if (!myProfile) {
-            if (userId != 0) {
-                messageButtonItem = buttonsGroupView.addItem(send_message, R.drawable.profile_message);
-                if (messageButtonItem != null) {
-                    messageButtonItem.setText(LocaleController.getString(R.string.Message));
-                }
-                notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_unmute);
-                if (notificationButtonItem != null) {
-                    notificationButtonItem.setText(LocaleController.getString(R.string.Unmute));
-                }
-                if (callItemVisible) {
-                    callButtonItem = buttonsGroupView.addItem(call_item, R.drawable.profile_call);
-                    if (callButtonItem != null) {
-                        callButtonItem.setText(LocaleController.getString(R.string.Call));
-                    }
-                }
-                if (videoCallItemVisible) {
-                    videoButtonItem = buttonsGroupView.addItem(video_call_item, R.drawable.profile_video_call);
-                    if (videoButtonItem != null) {
-                        videoButtonItem.setText(LocaleController.getString(R.string.Video));
-                    }
-                    giftPremiumItemVisible = true;
-                } else if (!BuildVars.IS_BILLING_UNAVAILABLE && !getMessagesController().premiumPurchaseBlocked()) {
-                    StarsController.getInstance(currentAccount).loadStarGifts();
-                    giftButtonItem = buttonsGroupView.addItem(gift_premium, R.drawable.profile_gift);
-                    if (giftButtonItem != null) {
-                        giftButtonItem.setText(LocaleController.getString(R.string.Gift));
-                    }
-                    giftPremiumItemVisible = false;
-                }
-            } else if (chatId != 0) {
-                if (ChatObject.isChannel(currentChat)) {
-                    if (chatInfo != null && ChatObject.canManageCalls(currentChat) && chatInfo.call == null && !(currentChat.megagroup && !currentChat.gigagroup)) {
-                        voiceChatButtonItem = buttonsGroupView.addItem(call_item, R.drawable.channel_live_stream);
-                        if (voiceChatButtonItem != null) {
-                            voiceChatButtonItem.setText(LocaleController.getString(R.string.LiveStream));
+        buttonsGroupView.setOnItemClickListener(new ButtonsGroupView.OnItemClickListener() {
+            @Override
+            public void onItemClick(View view, int id, float x, float y) {
+                Runnable showPopup = null;
+                if (id == notification) {
+                    showPopup = () -> {
+                        final long did1;
+                        if (dialogId != 0) {
+                            did1 = dialogId;
+                        } else if (userId != 0) {
+                            did1 = userId;
+                        } else {
+                            did1 = -chatId;
                         }
-                    } else if (currentChat.left && !currentChat.kicked) {
-                        long requestedTime = MessagesController.getNotificationsSettings(currentAccount).getLong("dialog_join_requested_time_" + dialogId, -1);
-                        if (!(requestedTime > 0 && System.currentTimeMillis() - requestedTime < 1000 * 60 * 2)) {
-                            joinButtonItem = buttonsGroupView.addItem(join_channel, R.drawable.channel_join);
-                            if (joinButtonItem != null) {
-                                joinButtonItem.setText(LocaleController.getString(R.string.Join));
-                            }
-                        }
-                    } else if (isTopic) {
-                        if (ChatObject.canSendMessages(currentChat)) {
-                            messageButtonItem = buttonsGroupView.addItem(send_message, R.drawable.profile_message);
-                            if (messageButtonItem != null) {
-                                messageButtonItem.setText(LocaleController.getString(R.string.Message));
-                            }
-                        }
-                    }
-                    notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_unmute);
-                    if (notificationButtonItem != null) {
-                        notificationButtonItem.setText(LocaleController.getString(R.string.Unmute));
-                    }
-                    if (currentChat.megagroup) {
-                        if (ChatObject.isPublic(currentChat)) {
-                            shareButtonItem = buttonsGroupView.addItem(share_contact, R.drawable.profile_share);
-                            if (shareButtonItem != null) {
-                                shareButtonItem.setText(LocaleController.getString(R.string.Share));
-                            }
-                        }
-                    } else {
-                        if (chatInfo != null && chatInfo.linked_chat_id != 0) {
-                            messageButtonItem = buttonsGroupView.addItem(view_discussion, R.drawable.profile_message);
-                            if (messageButtonItem != null) {
-                                messageButtonItem.setText(LocaleController.getString(R.string.Discuss));
-                            }
-                            giftPremiumItemVisible = true;
-                        } else if (!BuildVars.IS_BILLING_UNAVAILABLE && !getMessagesController().premiumPurchaseBlocked()) {
-                            if (!currentChat.left && !currentChat.kicked) {
-                                long requestedTime = MessagesController.getNotificationsSettings(currentAccount).getLong("dialog_join_requested_time_" + dialogId, -1);
-                                if (!(requestedTime > 0 && System.currentTimeMillis() - requestedTime < 1000 * 60 * 2)) {
-                                    StarsController.getInstance(currentAccount).loadStarGifts();
-                                    giftButtonItem = buttonsGroupView.addItem(gift_premium, R.drawable.profile_gift);
-                                    if (giftButtonItem != null) {
-                                        giftButtonItem.setText(LocaleController.getString(R.string.Gift));
-                                    }
-                                    giftPremiumItemVisible = false;
+                        ChatNotificationsPopupWrapper chatNotificationsPopupWrapper = new ChatNotificationsPopupWrapper(getContext(), currentAccount, null, true, true, new ChatNotificationsPopupWrapper.Callback() {
+                            @Override
+                            public void toggleSound() {
+                                SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
+                                boolean enabled = !preferences.getBoolean("sound_enabled_" + NotificationsController.getSharedPrefKey(did1, topicId), true);
+                                preferences.edit().putBoolean("sound_enabled_" + NotificationsController.getSharedPrefKey(did1, topicId), enabled).apply();
+                                if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
+                                    BulletinFactory.createSoundEnabledBulletin(ProfileActivity.this, enabled ? NotificationsController.SETTING_SOUND_ON : NotificationsController.SETTING_SOUND_OFF, getResourceProvider()).show();
                                 }
-                            } else {
-                                giftPremiumItemVisible = true;
                             }
-                        }
-                        if (ChatObject.isPublic(currentChat)) {
-                            shareButtonItem = buttonsGroupView.addItem(share_contact, R.drawable.profile_share);
-                            if (shareButtonItem != null) {
-                                shareButtonItem.setText(LocaleController.getString(R.string.Share));
-                            }
-                        }
-                        if (currentChat.left) {
-                            reportButtonItem = buttonsGroupView.addItem(report, R.drawable.profile_report);
-                            if (reportButtonItem != null) {
-                                reportButtonItem.setText(LocaleController.getString(R.string.Report2));
-                            }
-                        }
-                    }
-                } else {
-                    if (ChatObject.canSendMessages(currentChat)) {
-                        messageButtonItem = buttonsGroupView.addItem(send_message, R.drawable.profile_message);
-                        if (messageButtonItem != null) {
-                            messageButtonItem.setText(LocaleController.getString(R.string.Message));
-                        }
-                    }
 
-                    notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_unmute);
-                    if (notificationButtonItem != null) {
-                        notificationButtonItem.setText(LocaleController.getString(R.string.Unmute));
-                    }
-                }
-                if (chatInfo != null) {
-                    if (ChatObject.canManageCalls(currentChat) && chatInfo.call == null && !currentChat.gigagroup) {
-                        voiceChatButtonItem = buttonsGroupView.addItem(call_item, R.drawable.channel_live_stream);
-                        if (voiceChatButtonItem != null) {
-                            voiceChatButtonItem.setText(LocaleController.getString(R.string.VoiceChat));
+                            @Override
+                            public void muteFor(int timeInSeconds) {
+                                if (timeInSeconds == 0) {
+                                    if (getMessagesController().isDialogMuted(did1, topicId)) {
+                                        toggleMute();
+                                    }
+                                    if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
+                                        BulletinFactory.createMuteBulletin(ProfileActivity.this, NotificationsController.SETTING_MUTE_UNMUTE, timeInSeconds, getResourceProvider()).show();
+                                    }
+                                } else {
+                                    getNotificationsController().muteUntil(did1, topicId, timeInSeconds);
+                                    if (BulletinFactory.canShowBulletin(ProfileActivity.this)) {
+                                        BulletinFactory.createMuteBulletin(ProfileActivity.this, NotificationsController.SETTING_MUTE_CUSTOM, timeInSeconds, getResourceProvider()).show();
+                                    }
+                                    updateExceptions();
+                                    if (notificationsRow >= 0 && listAdapter != null) {
+                                        listAdapter.notifyItemChanged(notificationsRow);
+                                    }
+                                }
+                            }
+
+                            @Override
+                            public void showCustomize() {
+                                if (did1 != 0) {
+                                    Bundle args = new Bundle();
+                                    args.putLong("dialog_id", did1);
+                                    args.putLong("topic_id", topicId);
+                                    presentFragment(new ProfileNotificationsActivity(args, resourcesProvider));
+                                }
+                            }
+
+                            @Override
+                            public void toggleMute() {
+                                boolean muted = getMessagesController().isDialogMuted(did1, topicId);
+                                getNotificationsController().muteDialog(did1, topicId, !muted);
+                                if (ProfileActivity.this.fragmentView != null) {
+                                    BulletinFactory.createMuteBulletin(ProfileActivity.this, !muted, null).show();
+                                }
+                                updateExceptions();
+                                if (notificationsRow >= 0 && listAdapter != null) {
+                                    listAdapter.notifyItemChanged(notificationsRow);
+                                }
+                            }
+
+                            @Override
+                            public void openExceptions() {
+                                Bundle bundle = new Bundle();
+                                bundle.putLong("dialog_id", did1);
+                                TopicsNotifySettingsFragments notifySettings = new TopicsNotifySettingsFragments(bundle);
+                                notifySettings.setExceptions(notificationsExceptionTopics);
+                                presentFragment(notifySettings);
+                            }
+                        }, getResourceProvider());
+
+                        chatNotificationsPopupWrapper.update(did1, topicId, notificationsExceptionTopics);
+                        if (AndroidUtilities.isTablet()) {
+                            View v = parentLayout.getView();
+                            chatNotificationsPopupWrapper.showAsOptions(ProfileActivity.this, buttonsGroupView, x + v.getX() + v.getPaddingLeft(), y + v.getY() + v.getPaddingTop());
                         }
-                    }
+                        chatNotificationsPopupWrapper.showAsOptions(ProfileActivity.this, buttonsGroupView, x, y);
+
+                    };
                 }
-                if (!currentChat.creator && !currentChat.left && !currentChat.kicked && !isTopic) {
-                    leaveButtonItem = buttonsGroupView.addItem(leave_group, R.drawable.channel_leave);
-                    if (leaveButtonItem != null) {
-                        leaveButtonItem.setText(LocaleController.getString(R.string.Leave));
-                    }
-                }
+                onClick(id, showPopup);
             }
-
-//            stopButtonItem = buttonsGroupView.addItem(block_contact, R.drawable.profile_block);
-//            if (stopButtonItem != null) stopButtonItem.setText(LocaleController.getString(R.string.Stop));
-//            addStoryButtonItem = buttonsGroupView.addItem(add_story, R.drawable.profile_add_story);
-//            if (addStoryButtonItem != null) addStoryButtonItem.setText(LocaleController.getString(R.string.AddStory));
-        }
+        });
+        updateButtonsRow();
         avatarContainer2.addView(buttonsGroupView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         updateProfileData(true);
 
@@ -4983,7 +4940,194 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         return fragmentView;
     }
 
-    private void onClick(int id) {
+    private void updateButtonsRow() {
+        if (buttonsGroupView == null) {
+            return;
+        }
+        buttonsGroupView.clearButtons();
+        boolean hasVoiceChat = false;
+        long did;
+        if (currentEncryptedChat != null) {
+            did = DialogObject.makeEncryptedDialogId(currentEncryptedChat.id);
+        } else if (userId != 0) {
+            did = userId;
+        } else if (chatId != 0) {
+            did = -chatId;
+        } else {
+            return;
+        }
+        boolean muted = getMessagesController().isDialogMuted(did, topicId);
+        if (!myProfile) {
+            if (userId != 0) {
+                messageButtonItem = buttonsGroupView.addItem(send_message, R.drawable.profile_message);
+                if (messageButtonItem != null) {
+                    messageButtonItem.setText(LocaleController.getString(R.string.Message));
+                }
+                if (muted) {
+                    notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_unmute);
+                    if (notificationButtonItem != null) {
+                        notificationButtonItem.setText(LocaleController.getString(R.string.Unmute));
+                    }
+                } else {
+                    notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_mute);
+                    if (notificationButtonItem != null) {
+                        notificationButtonItem.setText(LocaleController.getString(R.string.Mute));
+                    }
+                }
+                TLRPC.User user = getMessagesController().getUser(userId);
+                if (isBot || MessagesController.isSupportUser(user)) {
+                    shareButtonItem = buttonsGroupView.addItem(ChatObject.isPublic(currentChat) ? share_contact : share, R.drawable.profile_share);
+                    if (shareButtonItem != null) {
+                        shareButtonItem.setText(LocaleController.getString(R.string.Share));
+                    }
+                    stopButtonItem = buttonsGroupView.addItem(block_contact, R.drawable.profile_block);
+                    if (stopButtonItem != null) {
+                        stopButtonItem.setText(LocaleController.getString(R.string.Stop));
+                    }
+                } else {
+                    if (callItemVisible) {
+                        callButtonItem = buttonsGroupView.addItem(call_item, R.drawable.profile_call);
+                        if (callButtonItem != null) {
+                            callButtonItem.setText(LocaleController.getString(R.string.Call));
+                        }
+                    }
+                    if (videoCallItemVisible) {
+                        videoButtonItem = buttonsGroupView.addItem(video_call_item, R.drawable.profile_video_call);
+                        if (videoButtonItem != null) {
+                            videoButtonItem.setText(LocaleController.getString(R.string.Video));
+                        }
+                        giftPremiumItemVisible = true;
+                    } else if (!BuildVars.IS_BILLING_UNAVAILABLE && !getMessagesController().premiumPurchaseBlocked()) {
+                        StarsController.getInstance(currentAccount).loadStarGifts();
+                        giftButtonItem = buttonsGroupView.addItem(gift_premium, R.drawable.profile_gift);
+                        if (giftButtonItem != null) {
+                            giftButtonItem.setText(LocaleController.getString(R.string.Gift));
+                        }
+                        giftPremiumItemVisible = false;
+                    }
+                }
+            } else if (chatId != 0) {
+                if (ChatObject.isChannel(currentChat)) {
+                    if (chatInfo != null && ChatObject.canManageCalls(currentChat) && chatInfo.call == null && !(currentChat.megagroup && !currentChat.gigagroup)) {
+                        voiceChatButtonItem = buttonsGroupView.addItem(call_item, R.drawable.channel_live_stream);
+                        if (voiceChatButtonItem != null) {
+                            voiceChatButtonItem.setText(LocaleController.getString(R.string.LiveStream));
+                            hasVoiceChat = true;
+                        }
+                    } else if (currentChat.left && !currentChat.kicked) {
+                        long requestedTime = MessagesController.getNotificationsSettings(currentAccount).getLong("dialog_join_requested_time_" + dialogId, -1);
+                        if (!(requestedTime > 0 && System.currentTimeMillis() - requestedTime < 1000 * 60 * 2)) {
+                            joinButtonItem = buttonsGroupView.addItem(join_channel, R.drawable.channel_join);
+                            if (joinButtonItem != null) {
+                                joinButtonItem.setText(LocaleController.getString(R.string.Join));
+                            }
+                        }
+                    } else if (isTopic) {
+                        if (ChatObject.canSendMessages(currentChat)) {
+                            messageButtonItem = buttonsGroupView.addItem(send_message, R.drawable.profile_message);
+                            if (messageButtonItem != null) {
+                                messageButtonItem.setText(LocaleController.getString(R.string.Message));
+                            }
+                        }
+                    }
+                    if (muted) {
+                        notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_unmute);
+                        if (notificationButtonItem != null) {
+                            notificationButtonItem.setText(LocaleController.getString(R.string.Unmute));
+                        }
+                    } else {
+                        notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_mute);
+                        if (notificationButtonItem != null) {
+                            notificationButtonItem.setText(LocaleController.getString(R.string.Mute));
+                        }
+                    }
+                    if (currentChat.megagroup) {
+                        if (ChatObject.isPublic(currentChat)) {
+                            shareButtonItem = buttonsGroupView.addItem(share_contact, R.drawable.profile_share);
+                            if (shareButtonItem != null) {
+                                shareButtonItem.setText(LocaleController.getString(R.string.Share));
+                            }
+                        }
+                    } else {
+                        if (chatInfo != null && chatInfo.linked_chat_id != 0) {
+                            messageButtonItem = buttonsGroupView.addItem(view_discussion, R.drawable.profile_message);
+                            if (messageButtonItem != null) {
+                                messageButtonItem.setText(LocaleController.getString(R.string.Discuss));
+                            }
+                            giftPremiumItemVisible = true;
+                        } else if (!BuildVars.IS_BILLING_UNAVAILABLE && !getMessagesController().premiumPurchaseBlocked()) {
+                            if (!currentChat.left && !currentChat.kicked && !currentChat.creator) {
+                                StarsController.getInstance(currentAccount).loadStarGifts();
+                                giftButtonItem = buttonsGroupView.addItem(gift_premium, R.drawable.profile_gift);
+                                if (giftButtonItem != null) {
+                                    giftButtonItem.setText(LocaleController.getString(R.string.Gift));
+                                }
+                                giftPremiumItemVisible = false;
+                            } else {
+                                giftPremiumItemVisible = true;
+                            }
+                        }
+                        if (ChatObject.isPublic(currentChat) && !currentChat.creator) {
+                            shareButtonItem = buttonsGroupView.addItem(share_contact, R.drawable.profile_share);
+                            if (shareButtonItem != null) {
+                                shareButtonItem.setText(LocaleController.getString(R.string.Share));
+                            }
+                        }
+                        if (currentChat.left) {
+                            reportButtonItem = buttonsGroupView.addItem(report, R.drawable.profile_report);
+                            if (reportButtonItem != null) {
+                                reportButtonItem.setText(LocaleController.getString(R.string.Report2));
+                            }
+                        }
+                    }
+                } else {
+                    if (ChatObject.canSendMessages(currentChat)) {
+                        messageButtonItem = buttonsGroupView.addItem(send_message, R.drawable.profile_message);
+                        if (messageButtonItem != null) {
+                            messageButtonItem.setText(LocaleController.getString(R.string.Message));
+                        }
+                    }
+                    if (muted) {
+                        notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_unmute);
+                        if (notificationButtonItem != null) {
+                            notificationButtonItem.setText(LocaleController.getString(R.string.Unmute));
+                        }
+                    } else {
+                        notificationButtonItem = buttonsGroupView.addItem(notification, R.drawable.profile_mute);
+                        if (notificationButtonItem != null) {
+                            notificationButtonItem.setText(LocaleController.getString(R.string.Mute));
+                        }
+                    }
+                }
+                if (chatInfo != null) {
+                    if (!hasVoiceChat && ChatObject.canManageCalls(currentChat) && chatInfo.call == null && !currentChat.gigagroup) {
+                        voiceChatButtonItem = buttonsGroupView.addItem(call_item, R.drawable.channel_live_stream);
+                        if (voiceChatButtonItem != null) {
+                            voiceChatButtonItem.setText(LocaleController.getString(R.string.VoiceChat));
+                        }
+                    }
+                }
+                if (currentChat.creator) {
+                    if (getMessagesController().storiesEnabled()) {
+                        addStoryButtonItem = buttonsGroupView.addItem(add_story, R.drawable.profile_add_story);
+                        if (addStoryButtonItem != null) {
+                            addStoryButtonItem.setText(LocaleController.getString(R.string.AddStory));
+                        }
+                    } else {
+
+                    }
+                }
+                if (!currentChat.creator && !currentChat.left && !currentChat.kicked && !isTopic) {
+                    leaveButtonItem = buttonsGroupView.addItem(leave_group, R.drawable.channel_leave);
+                    if (leaveButtonItem != null) {
+                        leaveButtonItem.setText(LocaleController.getString(R.string.Leave));
+                    }
+                }
+            }
+        }
+    }
+
+    private void onClick(int id, Runnable showPopup) {
         if (getParentActivity() == null) {
             return;
         }
@@ -5051,6 +5195,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     finishFragment();
                 }
             }
+            updateButtonsRow();
         } else if (id == add_contact) {
             TLRPC.User user = getMessagesController().getUser(userId);
             Bundle args = new Bundle();
@@ -5096,6 +5241,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         } else if (id == leave_group) {
             leaveChatPressed();
+            updateButtonsRow();
         } else if (id == delete_topic) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
             builder.setTitle(LocaleController.getPluralString("DeleteTopics", 1));
@@ -5131,6 +5277,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         } else if (id == report) {
             ReportBottomSheet.openChat(ProfileActivity.this, getDialogId());
+            updateButtonsRow();
         } else if (id == edit_channel) {
             if (isTopic) {
                 Bundle args = new Bundle();
@@ -5152,6 +5299,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 presentFragment(fragment);
             }
+            updateButtonsRow();
         } else if (id == edit_profile) {
             presentFragment(new UserInfoActivity());
         } else if (id == invite_to_group) {
@@ -5532,12 +5680,55 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         } else if (id == send_message) {
             onWriteButtonClick();
         } else if (id == notification) {
-
+            if (showPopup != null) {
+                showPopup.run();
+            } else {
+                long did;
+                if (currentEncryptedChat != null) {
+                    did = DialogObject.makeEncryptedDialogId(currentEncryptedChat.id);
+                } else if (userId != 0) {
+                    did = userId;
+                } else if (chatId != 0) {
+                    did = -chatId;
+                } else {
+                    return;
+                }
+                boolean muted = getMessagesController().isDialogMuted(did, topicId);
+                getNotificationsController().muteDialog(did, topicId, !muted);
+                BulletinFactory.createMuteBulletin(ProfileActivity.this, !muted, null).show();
+                updateExceptions();
+            }
+            updateButtonsRow();
         } else if (id == add_story) {
+            if (!getMessagesController().storiesEnabled()) {
+                showDialog(new PremiumFeatureBottomSheet(this, PremiumPreviewFragment.PREMIUM_FEATURE_STORIES, true));
+                return;
+            }
+            getMessagesController().getMainSettings().edit().putBoolean("story_keep", true).apply();
+            StoryRecorder.getInstance(getParentActivity(), getCurrentAccount())
+                    .closeToWhenSent(new StoryRecorder.ClosingViewProvider() {
+                        @Override
+                        public void preLayout(long dialogId, Runnable runnable) {
+                            avatarImage.setHasStories(needInsetForStories());
+                            if (dialogId == getDialogId()) {
+                                collapseAvatarInstant();
+                            }
+                            AndroidUtilities.runOnUIThread(runnable, 30);
+                        }
 
+                        @Override
+                        public StoryRecorder.SourceView getView(long dialogId) {
+                            if (dialogId != getDialogId()) {
+                                return null;
+                            }
+                            updateAvatarRoundRadius();
+                            return StoryRecorder.SourceView.fromAvatarImage(avatarImage, ChatObject.isForum(currentChat));
+                        }
+                    })
+                    .open(null);
         } else if (id == join_channel) {
             getMessagesController().addUserToChat(currentChat.id, getUserConfig().getCurrentUser(), 0, null, ProfileActivity.this, true, () -> {
-                //remove button from buttons group
+                updateButtonsRow();
             }, err -> {
                 if (err != null && "INVITE_REQUEST_SENT".equals(err.text)) {
                     SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
@@ -8165,6 +8356,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
             }
         }
+        updateButtonsRow();
     }
 
     private void updateAutoDeleteItem() {
@@ -10426,6 +10618,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void createActionBarMenu(boolean animated) {
+        updateButtonsRow();
         if (actionBar == null || otherItem == null) {
             return;
         }

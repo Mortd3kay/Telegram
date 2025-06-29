@@ -5261,8 +5261,8 @@
     <string name="AutoDeleteAfter">Auto-delete after %s</string>
     <string name="AutoDeleteAfterShort">After %s</string>
     <string name="ChooseTimeForMute">Choose time</string>
-    <string name="SoundOn">Enable sound</string>
-    <string name="SoundOff">Disable sound</string>
+    <string name="SoundOn">Enable Sound</string>
+    <string name="SoundOff">Disable Sound</string>
     <string name="MuteForPopup">Mute for...</string>
     <string name="MuteForAlert">Mute notifications for...</string>
     <string name="MuteForButton">Mute for %s</string>

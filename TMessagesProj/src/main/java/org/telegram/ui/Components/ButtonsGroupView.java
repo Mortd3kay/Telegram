@@ -6,23 +6,15 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.R;
-import org.telegram.ui.ActionBar.ActionBarMenuSubItem;
-import org.telegram.ui.ActionBar.ActionBarPopupWindow;
 import org.telegram.ui.ActionBar.Theme;
 
 import java.util.ArrayList;
@@ -34,9 +26,6 @@ public class ButtonsGroupView extends FrameLayout {
         private int icon;
         private CharSequence text;
         private ButtonsGroupView parent;
-        private ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout;
-        private ActionBarPopupWindow popupWindow;
-        private boolean hasSubMenu = false;
         private final Theme.ResourcesProvider resourcesProvider;
 
         public Item(int id, int icon, ButtonsGroupView parent) {
@@ -71,154 +60,10 @@ public class ButtonsGroupView extends FrameLayout {
                 parent.invalidate();
             }
         }
-
-        private void createPopupLayout() {
-            if (popupLayout != null) {
-                return;
-            }
-            popupLayout = new ActionBarPopupWindow.ActionBarPopupWindowLayout(parent.getContext(), 
-                R.drawable.popup_fixed_alert2, resourcesProvider, 
-                ActionBarPopupWindow.ActionBarPopupWindowLayout.FLAG_USE_SWIPEBACK);
-            
-            popupLayout.setOnTouchListener((v, event) -> {
-                if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                    if (popupWindow != null && popupWindow.isShowing()) {
-                        popupWindow.dismiss();
-                    }
-                }
-                return false;
-            });
-            
-            popupLayout.setDispatchKeyEventListener(keyEvent -> {
-                if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_BACK && keyEvent.getRepeatCount() == 0 && popupWindow != null && popupWindow.isShowing()) {
-                    popupWindow.dismiss();
-                }
-            });
-        }
-
-        public ActionBarMenuSubItem addSubItem(int id, int icon, CharSequence text) {
-            return addSubItem(id, icon, null, text, true, false);
-        }
-
-        public ActionBarMenuSubItem addSubItem(int id, int icon, Drawable iconDrawable, CharSequence text, boolean dismiss, boolean needCheck) {
-            createPopupLayout();
-            hasSubMenu = true;
-
-            ActionBarMenuSubItem cell = new ActionBarMenuSubItem(parent.getContext(), needCheck, false, false, resourcesProvider);
-            cell.setTextAndIcon(text, icon, iconDrawable);
-            cell.setMinimumWidth(AndroidUtilities.dp(196));
-            cell.setTag(id);
-            popupLayout.addView(cell);
-            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) cell.getLayoutParams();
-            if (layoutParams == null) {
-                layoutParams = new LinearLayout.LayoutParams(LayoutHelper.MATCH_PARENT, AndroidUtilities.dp(48));
-            } else {
-                layoutParams.width = LayoutHelper.MATCH_PARENT;
-                layoutParams.height = AndroidUtilities.dp(48);
-            }
-            cell.setLayoutParams(layoutParams);
-            
-            cell.setOnClickListener(view -> {
-                if (popupWindow != null && popupWindow.isShowing()) {
-                    if (dismiss) {
-                        popupWindow.dismiss();
-                    }
-                }
-                if (parent.onSubItemClickListener != null) {
-                    parent.onSubItemClickListener.onSubItemClick(this.id, (Integer) view.getTag());
-                }
-            });
-            return cell;
-        }
-
-        public void removeAllSubItems() {
-            if (popupLayout == null) {
-                return;
-            }
-            popupLayout.removeInnerViews();
-            hasSubMenu = false;
-        }
-
-        public boolean hasSubMenu() {
-            return hasSubMenu && popupLayout != null;
-        }
-
-        public void showSubMenu() {
-            if (!hasSubMenu() || parent == null) {
-                return;
-            }
-
-            if (popupWindow != null && popupWindow.isShowing()) {
-                popupWindow.dismiss();
-                return;
-            }
-
-            if (popupLayout.getParent() != null) {
-                ((ViewGroup) popupLayout.getParent()).removeView(popupLayout);
-            }
-
-            popupWindow = new ActionBarPopupWindow(popupLayout, LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT);
-            popupWindow.setAnimationStyle(R.style.PopupAnimation);
-            popupWindow.setOutsideTouchable(true);
-            popupWindow.setClippingEnabled(true);
-            popupWindow.setInputMethodMode(ActionBarPopupWindow.INPUT_METHOD_NOT_NEEDED);
-            popupWindow.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED);
-            
-            popupLayout.setFocusableInTouchMode(true);
-            popupLayout.setOnKeyListener((v, keyCode, event) -> {
-                if (keyCode == KeyEvent.KEYCODE_MENU && event.getRepeatCount() == 0 && event.getAction() == KeyEvent.ACTION_UP && popupWindow != null && popupWindow.isShowing()) {
-                    popupWindow.dismiss();
-                    return true;
-                }
-                return false;
-            });
-
-            popupLayout.measure(View.MeasureSpec.makeMeasureSpec(AndroidUtilities.displaySize.x - AndroidUtilities.dp(40), View.MeasureSpec.AT_MOST), 
-                               View.MeasureSpec.makeMeasureSpec(AndroidUtilities.displaySize.y, View.MeasureSpec.AT_MOST));
-            
-            popupWindow.setFocusable(true);
-            
-            int[] location = new int[2];
-            parent.getLocationOnScreen(location);
-            int buttonIndex = parent.getItemIndex(this);
-            if (buttonIndex >= 0) {
-                int buttonX = parent.getButtonX(buttonIndex);
-                int buttonWidth = parent.getButtonWidth(buttonIndex);
-                
-                int popupX = location[0] + buttonX + (buttonWidth - popupLayout.getMeasuredWidth()) / 2;
-                int popupY = location[1] - popupLayout.getMeasuredHeight() - AndroidUtilities.dp(8);
-                
-                if (popupX < AndroidUtilities.dp(16)) {
-                    popupX = AndroidUtilities.dp(16);
-                } else if (popupX + popupLayout.getMeasuredWidth() > AndroidUtilities.displaySize.x - AndroidUtilities.dp(16)) {
-                    popupX = AndroidUtilities.displaySize.x - AndroidUtilities.dp(16) - popupLayout.getMeasuredWidth();
-                }
-                
-                if (popupY < AndroidUtilities.dp(16)) {
-                    popupY = location[1] + parent.getMeasuredHeight() + AndroidUtilities.dp(8);
-                }
-                
-                popupWindow.showAtLocation(parent, Gravity.LEFT | Gravity.TOP, popupX, popupY);
-            } else {
-                popupWindow.showAsDropDown(parent);
-            }
-            
-            popupWindow.startAnimation();
-        }
-
-        public void hideSubMenu() {
-            if (popupWindow != null && popupWindow.isShowing()) {
-                popupWindow.dismiss();
-            }
-        }
     }
 
     public interface OnItemClickListener {
-        void onItemClick(int id);
-    }
-
-    public interface OnSubItemClickListener {
-        void onSubItemClick(int itemId, int subItemId);
+        void onItemClick(View view, int id, float x, float y);
     }
 
     private static final int MAX_BUTTONS = 5;
@@ -232,7 +77,6 @@ public class ButtonsGroupView extends FrameLayout {
     private int pressedButtonIndex = -1;
     private int clickedButtonIndex = -1;
     private OnItemClickListener onItemClickListener;
-    private OnSubItemClickListener onSubItemClickListener;
     private Theme.ResourcesProvider resourcesProvider;
 
     public ButtonsGroupView(Context context) {
@@ -265,13 +109,9 @@ public class ButtonsGroupView extends FrameLayout {
         this.onItemClickListener = listener;
     }
 
-    public void setOnSubItemClickListener(OnSubItemClickListener listener) {
-        this.onSubItemClickListener = listener;
-    }
-
-    public void onItemClick(int id) {
+    public void onItemClick(View view, int id, float x, float y) {
         if (onItemClickListener != null) {
-            onItemClickListener.onItemClick(id);
+            onItemClickListener.onItemClick(view, id, x, y);
         }
     }
 
@@ -301,6 +141,10 @@ public class ButtonsGroupView extends FrameLayout {
         int sideMargin = AndroidUtilities.dp(12);
         int totalSpacing = (buttonCount - 1) * buttonSpacing + 2 * sideMargin;
         return (width - totalSpacing) / buttonCount;
+    }
+
+    public void clearButtons() {
+        buttons.clear();
     }
 
     public void setProgressToExpand(float progress) {
@@ -457,11 +301,7 @@ public class ButtonsGroupView extends FrameLayout {
                     pressedButtonIndex = -1;
                     clickedButtonIndex = i;
                     
-                    if (item.hasSubMenu()) {
-                        item.showSubMenu();
-                    } else {
-                        performClick();
-                    }
+                    performClick();
                     invalidate();
                     return true;
                 }
@@ -506,8 +346,10 @@ public class ButtonsGroupView extends FrameLayout {
 
         if (clickedButtonIndex >= 0 && clickedButtonIndex < buttons.size()) {
             Item item = buttons.get(clickedButtonIndex);
-            if (item != null && !item.hasSubMenu()) {
-                onItemClick(item.getId());
+            if (item != null) {
+                float clickX = getButtonX(clickedButtonIndex) + getButtonWidth(clickedButtonIndex) / 2f;
+                float clickY = getMeasuredHeight() / 2f;
+                onItemClick(this, item.getId(), clickX, clickY);
                 performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             }
             clickedButtonIndex = -1;
@@ -515,11 +357,5 @@ public class ButtonsGroupView extends FrameLayout {
         }
 
         return false;
-    }
-
-    public void hideAllPopupMenus() {
-        for (Item item : buttons) {
-            item.hideSubMenu();
-        }
     }
 }
