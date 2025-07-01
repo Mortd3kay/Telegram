@@ -15,6 +15,7 @@ import static org.telegram.messenger.ContactsController.PRIVACY_RULES_TYPE_ADDED
 import static org.telegram.messenger.LocaleController.formatPluralString;
 import static org.telegram.messenger.LocaleController.formatString;
 import static org.telegram.messenger.LocaleController.getString;
+import static org.telegram.messenger.MessagesController.findUpdatesAndRemove;
 import static org.telegram.ui.Stars.StarsIntroActivity.formatStarsAmountShort;
 import static org.telegram.ui.bots.AffiliateProgramFragment.percents;
 
@@ -168,6 +169,7 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_account;
 import org.telegram.tgnet.tl.TL_bots;
 import org.telegram.tgnet.tl.TL_fragment;
+import org.telegram.tgnet.tl.TL_phone;
 import org.telegram.tgnet.tl.TL_stars;
 import org.telegram.tgnet.tl.TL_stories;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -5108,13 +5110,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
                 if (currentChat.creator) {
-                    if (getMessagesController().storiesEnabled()) {
-                        addStoryButtonItem = buttonsGroupView.addItem(add_story, R.drawable.profile_add_story);
-                        if (addStoryButtonItem != null) {
-                            addStoryButtonItem.setText(LocaleController.getString(R.string.AddStory));
-                        }
-                    } else {
-
+                    addStoryButtonItem = buttonsGroupView.addItem(add_story, R.drawable.profile_add_story);
+                    if (addStoryButtonItem != null) {
+                        addStoryButtonItem.setText(LocaleController.getString(R.string.AddStory));
                     }
                 }
                 if (!currentChat.creator && !currentChat.left && !currentChat.kicked && !isTopic) {
@@ -5415,8 +5413,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         } else if (id == call_item || id == video_call_item) {
             if (userId != 0) {
                 TLRPC.User user = getMessagesController().getUser(userId);
+                ArrayList<TLRPC.User> users = new ArrayList<>();
+                users.add(user);
                 if (user != null) {
-                    VoIPHelper.startCall(user, id == video_call_item, userInfo != null && userInfo.video_calls_available, getParentActivity(), userInfo, getAccountInstance());
+                    if (id == call_item) {
+                        if (userInfo != null && userInfo.phone_calls_private) {
+                            createCallLink(getContext(), currentAccount, resourceProvider, users, currentChat);
+                        } else {
+                            VoIPHelper.startCall(user, false, userInfo != null && userInfo.video_calls_available, getParentActivity(), userInfo, getAccountInstance());
+                        }
+                    } else {
+                        VoIPHelper.startCall(user, true, userInfo != null && userInfo.video_calls_available, getParentActivity(), userInfo, getAccountInstance());
+                    }
                 }
             } else if (chatId != 0) {
                 ChatObject.Call call = getMessagesController().getGroupCall(chatId, false);
@@ -14784,4 +14792,59 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
     }
 
+    private static void createCallLink(Context context, int currentAccount, Theme.ResourcesProvider resourceProvider, ArrayList<TLRPC.User> users, TLRPC.Chat chat) {
+        final AlertDialog progressDialog = new AlertDialog(context, AlertDialog.ALERT_TYPE_SPINNER);
+        progressDialog.showDelayed(500);
+
+        final TL_phone.createConferenceCall req = new TL_phone.createConferenceCall();
+        req.random_id = Utilities.random.nextInt();
+        ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+            if (res instanceof TLRPC.Updates) {
+                TLRPC.Updates updates = (TLRPC.Updates) res;
+                MessagesController.getInstance(currentAccount).putUsers(updates.users, false);
+                MessagesController.getInstance(currentAccount).putChats(updates.chats, false);
+
+                TLRPC.GroupCall groupCall = null;
+                for (TLRPC.TL_updateGroupCall u : findUpdatesAndRemove(updates, TLRPC.TL_updateGroupCall.class)) {
+                    groupCall = u.call;
+                }
+                progressDialog.dismiss();
+                if (groupCall != null) {
+                    final TLRPC.TL_inputGroupCall inputGroupCall = new TLRPC.TL_inputGroupCall();
+                    inputGroupCall.id = groupCall.id;
+                    inputGroupCall.access_hash = groupCall.access_hash;
+                    BaseFragment fragment = LaunchActivity.getSafeLastFragment();
+                    if (fragment == null) return;
+                    final LimitReachedBottomSheet restrictedUsersBottomSheet = new LimitReachedBottomSheet(fragment, fragment.getContext(), LimitReachedBottomSheet.TYPE_CALL_RESTRICTED, currentAccount, resourceProvider);
+                    restrictedUsersBottomSheet.setRestrictedUsers(chat, users, null, null, groupCall.invite_link);
+                    restrictedUsersBottomSheet.show();
+                }
+            } else if (res instanceof TL_phone.groupCall) {
+                final TL_phone.groupCall r = (TL_phone.groupCall) res;
+                MessagesController.getInstance(currentAccount).putUsers(r.users, false);
+                MessagesController.getInstance(currentAccount).putChats(r.chats, false);
+
+                final TL_phone.exportGroupCallInvite req2 = new TL_phone.exportGroupCallInvite();
+                req2.call = new TLRPC.TL_inputGroupCall();
+                req2.call.id = r.call.id;
+                req2.call.access_hash = r.call.access_hash;
+                ConnectionsManager.getInstance(currentAccount).sendRequest(req2, (res2, err2) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (res2 instanceof TL_phone.exportedGroupCallInvite) {
+                        progressDialog.dismiss();
+
+                        final TL_phone.exportedGroupCallInvite r2 = (TL_phone.exportedGroupCallInvite) res2;
+                        BaseFragment fragment = LaunchActivity.getSafeLastFragment();
+                        if (fragment == null) return;
+                        final LimitReachedBottomSheet restrictedUsersBottomSheet = new LimitReachedBottomSheet(fragment, fragment.getContext(), LimitReachedBottomSheet.TYPE_CALL_RESTRICTED, currentAccount, resourceProvider);
+                        restrictedUsersBottomSheet.setRestrictedUsers(chat, users, null, null, r2.link);
+                        restrictedUsersBottomSheet.show();
+                    } else {
+                        progressDialog.dismiss();
+                    }
+                }));
+            } else {
+                progressDialog.dismiss();
+            }
+        }));
+    }
 }
