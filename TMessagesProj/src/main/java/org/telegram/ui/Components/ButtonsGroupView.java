@@ -159,15 +159,14 @@ public class ButtonsGroupView extends FrameLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int buttonCount = getVisibleButtonCount();
-
+    
         if (buttonCount == 0) {
             setMeasuredDimension(width, 0);
             return;
         }
-
+    
         int maxButtonHeight = AndroidUtilities.dp(56);
-        int minButtonHeight = AndroidUtilities.dp(20);
-        int currentHeight = (int) (minButtonHeight + (maxButtonHeight - minButtonHeight) * progressToExpand);
+        int currentHeight = (int) (maxButtonHeight * progressToExpand);
         setMeasuredDimension(width, currentHeight);
     }
 
@@ -184,42 +183,26 @@ public class ButtonsGroupView extends FrameLayout {
             return;
         }
 
-        int width = getMeasuredWidth();
+        int buttonWidth = (getMeasuredWidth() - (buttonCount - 1) * AndroidUtilities.dp(8) - 2 * AndroidUtilities.dp(12)) / buttonCount;
 
-        int buttonSpacing = AndroidUtilities.dp(8);
-        int sideMargin = AndroidUtilities.dp(12);
-        int totalSpacing = (buttonCount - 1) * buttonSpacing + 2 * sideMargin;
-        int buttonWidth = (width - totalSpacing) / buttonCount;
-
-        int maxButtonHeight = AndroidUtilities.dp(56);
-        int minButtonHeight = AndroidUtilities.dp(20);
-        int buttonHeight = (int) (minButtonHeight + (maxButtonHeight - minButtonHeight) * progressToExpand);
-
+        int buttonHeight = (int) (AndroidUtilities.dp(56) * progressToExpand);
         int buttonTop = 0;
 
-        int backgroundAlpha = (int) (255 * baseBackgroundAlpha * progressToExpand);
-        backgroundPaint.setAlpha(backgroundAlpha);
+        backgroundPaint.setAlpha((int) (255 * baseBackgroundAlpha * progressToExpand));
 
-        int edgePadding = AndroidUtilities.dp(8);
-        float iconScale = progressToExpand;
-        float textScale = (float) Math.sqrt(progressToExpand);
-        int iconAlpha = (int) (255 * iconScale);
-        int textAlpha = (int) (255 * textScale);
-        int baseIconSize = AndroidUtilities.dp(24);
-        int baseTextSize = AndroidUtilities.dp(11);
-        int iconSize = (int) (baseIconSize * iconScale);
-        int textSize = (int) (baseTextSize * textScale);
+        int availableContentHeight = Math.max(0, buttonHeight - 2 * AndroidUtilities.dp(8));
+        int textSize = (int) (AndroidUtilities.dp(11) * progressToExpand);
+        int iconSize = Math.min(AndroidUtilities.dp(24), Math.max(0, availableContentHeight - textSize - (textSize > 0 ? AndroidUtilities.dp(4) : 0)));
 
-        textPaint.setAlpha(textAlpha);
+        textPaint.setAlpha((int) (255 * progressToExpand));
         textPaint.setTextSize(textSize);
         Paint.FontMetrics fontMetrics = textPaint.getFontMetrics();
-        int textBaseY = (int) (buttonTop + buttonHeight - edgePadding - fontMetrics.descent);
 
-        int currentX = sideMargin;
+        int currentX = AndroidUtilities.dp(12);
         for (int i = 0; i < buttonCount && i < buttons.size(); i++) {
             Item item = buttons.get(i);
             if (item == null) {
-                currentX += buttonWidth + buttonSpacing;
+                currentX += buttonWidth + AndroidUtilities.dp(8);
                 continue;
             }
 
@@ -227,26 +210,32 @@ public class ButtonsGroupView extends FrameLayout {
             canvas.drawRoundRect(buttonRect, AndroidUtilities.dp(10), AndroidUtilities.dp(10), backgroundPaint);
 
             boolean isPressed = i == pressedButtonIndex;
-            int currentIconAlpha = isPressed ? (int) (iconAlpha * disabledContentAlpha) : iconAlpha;
-            int currentTextAlpha = isPressed ? (int) (textAlpha * disabledContentAlpha) : textAlpha;
+            int baseAlpha = (int) (255 * progressToExpand);
+            int currentIconAlpha = isPressed ? (int) (baseAlpha * disabledContentAlpha) : baseAlpha;
+            int currentTextAlpha = isPressed ? (int) (baseAlpha * disabledContentAlpha) : baseAlpha;
 
-            if (getContext() != null) {
-                Drawable icon = ContextCompat.getDrawable(getContext(), item.getIcon());
-                if (icon != null) {
-                    icon.setAlpha(currentIconAlpha);
-                    int iconLeft = currentX + (buttonWidth - iconSize) / 2;
-                    int iconTop = buttonTop + edgePadding;
-                    icon.setBounds(iconLeft, iconTop, iconLeft + iconSize, iconTop + iconSize);
-                    icon.draw(canvas);
+            if (getContext() != null && availableContentHeight > 0) {
+                int contentOffsetY = Math.max(0, (availableContentHeight - (iconSize + (iconSize > 0 && textSize > 0 ? AndroidUtilities.dp(4) : 0) + 
+                    (textSize > 0 ? (int) (fontMetrics.descent - fontMetrics.ascent) : 0))) / 2);
+                
+                if (iconSize > 0) {
+                    Drawable icon = ContextCompat.getDrawable(getContext(), item.getIcon());
+                    if (icon != null) {
+                        icon.setAlpha(currentIconAlpha);
+                        icon.setBounds(currentX + (buttonWidth - iconSize) / 2, AndroidUtilities.dp(8) + contentOffsetY, 
+                            currentX + (buttonWidth + iconSize) / 2, AndroidUtilities.dp(8) + contentOffsetY + iconSize);
+                        icon.draw(canvas);
+                    }
                 }
 
-                if (item.getText() != null && !item.getText().toString().isEmpty()) {
+                if (textSize > 0 && item.getText() != null && !item.getText().toString().isEmpty()) {
                     textPaint.setAlpha(currentTextAlpha);
-                    canvas.drawText(item.getText().toString(), currentX + buttonWidth / 2f, textBaseY, textPaint);
+                    canvas.drawText(item.getText().toString(), currentX + buttonWidth / 2f, 
+                        AndroidUtilities.dp(8) + contentOffsetY + iconSize + (iconSize > 0 ? AndroidUtilities.dp(4) : 0) + (int) (-fontMetrics.ascent), textPaint);
                 }
             }
 
-            currentX += buttonWidth + buttonSpacing;
+            currentX += buttonWidth + AndroidUtilities.dp(8);
         }
     }
 
@@ -275,8 +264,7 @@ public class ButtonsGroupView extends FrameLayout {
         int buttonWidth = (getMeasuredWidth() - totalSpacing) / buttonCount;
 
         int maxButtonHeight = AndroidUtilities.dp(56);
-        int minButtonHeight = AndroidUtilities.dp(20);
-        int buttonHeight = (int) (minButtonHeight + (maxButtonHeight - minButtonHeight) * progressToExpand);
+        int buttonHeight = (int) (maxButtonHeight * progressToExpand);
         int buttonTop = 0;
 
         int currentX = sideMargin;
