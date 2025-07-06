@@ -4921,7 +4921,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         } else {
             if (imageUpdater != null) {
-                setProfilePhotoButtonItem = buttonsGroupView.addItem(add_photo, R.drawable.msg_addphoto);
+                setProfilePhotoButtonItem = buttonsGroupView.addItem(add_photo, R.drawable.camera);
                 if (setProfilePhotoButtonItem != null) {
                     setProfilePhotoButtonItem.setText(LocaleController.getString(R.string.AddPhoto));
                 }
