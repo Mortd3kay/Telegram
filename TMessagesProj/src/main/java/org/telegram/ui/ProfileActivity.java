@@ -7451,6 +7451,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
 
             if (openAnimationInProgress && playProfileAnimation == 2) {
+                float avX = 0;
+                float avY = (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight() / 2.0f - 21 * AndroidUtilities.density + actionBar.getTranslationY();
+
+                nameTextView[0].setTranslationX(0);
+                nameTextView[0].setTranslationY((float) Math.floor(avY) + AndroidUtilities.dp(1.3f));
+                onlineTextView[0].setTranslationX(0);
+                onlineTextView[0].setTranslationY((float) Math.floor(avY) + AndroidUtilities.dp(24));
+                nameTextView[0].setScaleX(1.0f);
+                nameTextView[0].setScaleY(1.0f);
+
                 avatarScale = AndroidUtilities.lerp(1.0f, (92f + 92f + 18f) / 92f, avatarAnimationProgress);
                 if (storyView != null) {
                     storyView.setExpandProgress(1f);
@@ -7680,22 +7690,32 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         float nameY = extraHeight - AndroidUtilities.dp(56f);
         float minNameY = actionBarHeight - AndroidUtilities.dp(50);
         nameY = Math.max(minNameY, nameY);
-        float onlineY = nameY + nameTextView[1].getMeasuredHeight() - AndroidUtilities.dp(1);
+        float onlineY = nameY + nameTextView[1].getMeasuredHeight() - AndroidUtilities.dp(4);
         
         float nameTextWidth = nameTextView[1].getPaint().measureText(nameTextView[1].getText().toString()) * nameScale + nameTextView[1].getSideDrawablesSize();
         float onlineTextWidth = onlineTextView[1].getPaint().measureText(onlineTextView[1].getText().toString()) + onlineTextView[1].getRightDrawableWidth();
         float centerNameX = (screenWidth - nameTextWidth) / 2f;
         float centerOnlineX = (screenWidth - onlineTextWidth) / 2f;
-        float leftNameX = AndroidUtilities.dp(64);
-        
+
         float nameX, onlineX;
         if (extraHeight <= AndroidUtilities.dp(100f)) {
-            nameX = leftNameX;
-            onlineX = nameX;
+            if (openAnimationInProgress) {
+                nameX = AndroidUtilities.dp(118);
+                onlineX = nameX;
+            } else {
+                nameX = AndroidUtilities.dp(64);
+                onlineX = nameX;
+            }
         } else if (extraHeight <= AndroidUtilities.dp(200f)) {
-            float progress = (extraHeight - AndroidUtilities.dp(100f)) / AndroidUtilities.dp(100f);
-            nameX = AndroidUtilities.lerp(leftNameX, centerNameX, progress);
-            onlineX = AndroidUtilities.lerp(leftNameX, centerOnlineX, progress);
+            if (openAnimationInProgress) {
+                float progress = (extraHeight - AndroidUtilities.dp(100f)) / AndroidUtilities.dp(100f);
+                nameX = AndroidUtilities.lerp(AndroidUtilities.dp(118), centerNameX, progress);
+                onlineX = AndroidUtilities.lerp(AndroidUtilities.dp(118), centerOnlineX, progress);
+            } else {
+                float progress = (extraHeight - AndroidUtilities.dp(100f)) / AndroidUtilities.dp(100f);
+                nameX = AndroidUtilities.lerp(AndroidUtilities.dp(64), centerNameX, progress);
+                onlineX = AndroidUtilities.lerp(AndroidUtilities.dp(64), centerOnlineX, progress);
+            }
         } else {
             float transitionProgress = Math.min(1f, (extraHeight - AndroidUtilities.dp(200f)) / AndroidUtilities.dp(50f));
             nameX = AndroidUtilities.lerp(centerNameX, AndroidUtilities.dp(24), transitionProgress);
@@ -7816,6 +7836,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         }
         fixLayout();
+        updateNameAndOnlinePosition();
     }
 
     private void invalidateIsInLandscapeMode() {
