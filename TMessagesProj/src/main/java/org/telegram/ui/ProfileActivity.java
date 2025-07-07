@@ -4150,7 +4150,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 
                 if (changed) {
-                    updateButtonsGroupViewPosition();
+                    post(() -> updateButtonsGroupViewPosition());
                 }
             }
         };
@@ -7708,9 +7708,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         buttonsGroupView.setProgressToExpand(progress);
     
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) buttonsGroupView.getLayoutParams();
-        if (params != null) {
+        if (params != null && params.topMargin != topMargin) {
             params.topMargin = topMargin;
-            buttonsGroupView.setLayoutParams(params);
+            buttonsGroupView.requestLayout();
         }
     }
 
