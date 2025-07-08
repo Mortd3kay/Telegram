@@ -348,15 +348,15 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             if (index == 0) {
                 gift.draw(
                     canvas,
-                    (float) (acx + ar * Math.cos(-65 / 180.0f * Math.PI)),
-                    (float) (acy + ar * Math.sin(-65 / 180.0f * Math.PI)),
+                    acx + dp(-60), acy + dp(-44),
                     scale, -65 + 90,
-                    alpha * (1.0f - expandProgress), lerp(0.9f, 0.25f, actionBarProgress)
+                    alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
+                    1.0f
                 );
             } else if (index == 1) {
                 gift.draw(
                     canvas,
-                    lerp(cacx + Math.min(getWidth() * .27f, dp(62)), cx, 0.5f * actionBarProgress), acy - dp(52),
+                    acx + dp(77), acy + dp(-39),
                     scale, -4.0f,
                     alpha * alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
@@ -364,7 +364,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             } else if (index == 2) {
                 gift.draw(
                     canvas,
-                    lerp(cacx + Math.min(getWidth() * .46f, dp(105)), cx, 0.5f * actionBarProgress), acy - dp(72),
+                    acx + dp(101), acy + dp(-8),
                     scale, 8.0f,
                     alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
@@ -372,7 +372,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             } else if (index == 3) {
                 gift.draw(
                     canvas,
-                    lerp(cacx + Math.min(getWidth() * .60f, dp(136)), cx, 0.5f * actionBarProgress), acy - dp(46),
+                    acx + dp(65), acy + dp(30),
                     scale, 3.0f,
                     alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
@@ -380,7 +380,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             } else if (index == 4) {
                 gift.draw(
                     canvas,
-                    lerp(cacx + Math.min(getWidth() * .08f, dp(21.6f)), cx, 0.5f * actionBarProgress), acy - dp(82f),
+                    acx + dp(-72), acy + dp(33),
                     scale, -3.0f,
                     alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
@@ -388,7 +388,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             } else if (index == 5) {
                 gift.draw(
                     canvas,
-                    lerp(cacx + Math.min(getWidth() * .745f, dp(186)), cx, 0.5f * actionBarProgress), acy - dp(39),
+                    acx + dp(-102), acy + dp(-5),
                     scale, 2.0f,
                     alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
@@ -396,7 +396,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             } else if (index == 6) {
                 gift.draw(
                     canvas,
-                    cacx + Math.min(getWidth() * .38f, dp(102)), expandY - dp(12),
+                    acx + dp(-112), acy + dp(51),
                     scale, 0,
                     alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
@@ -404,7 +404,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             } else if (index == 7) {
                 gift.draw(
                     canvas,
-                    cacx + Math.min(getWidth() * .135f, dp(36)), expandY - dp(17.6f),
+                    acx + dp(117), acy + dp(39),
                     scale, -5.0f,
                     alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
@@ -412,7 +412,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             } else if (index == 8) {
                 gift.draw(
                     canvas,
-                    cacx + Math.min(getWidth() * .76f, dp(178)), expandY - dp(21.66f),
+                    acx + dp(27), acy + dp(-52),
                     scale, 5.0f,
                     alpha * (1.0f - expandProgress) * (1.0f - actionBarProgress) * (closedAlpha),
                     1.0f
