@@ -1018,7 +1018,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.getSize(widthMeasureSpec) + AndroidUtilities.dp(3));
+            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.getSize(widthMeasureSpec) + AndroidUtilities.dp(100));
         }
 
         @Override
@@ -1155,11 +1155,27 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 if (hasEmoji) {
                     final float loadedScale = emojiLoadedT.set(isEmojiLoaded());
-                    final float full = emojiFullT.set(emojiIsCollectible);
                     if (loadedScale > 0) {
                         canvas.save();
                         canvas.clipRect(0, 0, getMeasuredWidth(), y1);
-                        StarGiftPatterns.drawProfilePattern(canvas, emoji, getMeasuredWidth(), ((actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + dp(144)) - (1f - extraHeight / dp(200)) * dp(50), Math.min(1f, extraHeight / dp(200)), full);
+                        float avatarCenterY = 0;
+                        if (avatarContainer != null) {
+                            FrameLayout.LayoutParams avatarParams = (FrameLayout.LayoutParams) avatarContainer.getLayoutParams();
+                            if (avatarParams != null) {
+                                avatarCenterY = avatarParams.topMargin + avatarContainer.getMeasuredHeight() / 2f;
+                            }
+                        }
+
+                        float patternOffsetY = -dp(16);
+                        if (extraHeight > dp(200)) {
+                            float additionalOffset = (extraHeight - dp(200)) * 0.5f;
+                            patternOffsetY += additionalOffset;
+                        }
+
+                        canvas.save();
+                        canvas.translate(0, patternOffsetY);
+                        StarGiftPatterns.drawDynamicProfilePattern(canvas, emoji, getMeasuredWidth(), height + dp(18), Math.min(1f, avatarCenterY / height), Math.min(1f, extraHeight / dp(200)) * 0.5f);
+                        canvas.restore();
                         canvas.restore();
                     }
                 }
@@ -7782,9 +7798,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         params.width = params.height = targetSize;
 
-        if (openingAvatar) {
-            params.topMargin = 0;
-        } else if (extraHeight > AndroidUtilities.dp(200f)) {
+        if (extraHeight > AndroidUtilities.dp(200f)) {
             params.topMargin = (int) (extraHeight - maxSize - AndroidUtilities.dp(72));
         } else {
             params.topMargin = (int) (extraHeight - targetSize - AndroidUtilities.dp(72));
