@@ -1340,7 +1340,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             topOverlayRect.set(0, 0, w, (int) (actionBarHeight * k));
             bottomOverlayRect.set(0, (int) (h - AndroidUtilities.dp(72f) * k), w, h);
             topOverlayGradient.setBounds(0, topOverlayRect.bottom, w, actionBarHeight + AndroidUtilities.dp(16f));
-            bottomOverlayGradient.setBounds(0, h - AndroidUtilities.dp(72f) - AndroidUtilities.dp(24f), w, bottomOverlayRect.top);
+            bottomOverlayGradient.setBounds(0, h - AndroidUtilities.dp(72f) - AndroidUtilities.dp(80f), w, bottomOverlayRect.top);
             pressedOverlayGradient[0].setBounds(0, 0, w / 5, h);
             pressedOverlayGradient[1].setBounds(w - (w / 5), 0, w, h);
         }
@@ -12315,18 +12315,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
-//            if (notificationRow != -1) {
-//                int position = holder.getAdapterPosition();
-//                return position == numberRow || position == privacyRow ||
-//                        position == languageRow || position == setUsernameRow || position == bioRow ||
-//                        position == versionRow || position == dataRow || position == chatRow ||
-//                        position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
-//                        position == faqRow || position == policyRow || position == sendLogsRow || position == sendLastLogsRow ||
-//                        position == clearLogsRow || position == switchBackendRow || position == setAvatarRow ||
-//                        position == addToGroupButtonRow || position == premiumRow || position == premiumGiftingRow ||
-//                        position == businessRow || position == liteModeRow || position == birthdayRow || position == channelRow ||
-//                        position == starsRow || position == tonRow;
-//            }
             if (holder.itemView instanceof UserCell) {
                 UserCell userCell = (UserCell) holder.itemView;
                 Object object = userCell.getCurrentObject();
