@@ -5797,6 +5797,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void setAvatarExpandProgress(float animatedFracture) {
+        final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
         final float value = currentExpandAnimatorValue = AndroidUtilities.lerp(expandAnimatorValues, currentExpanAnimatorFracture = animatedFracture);
         checkPhotoDescriptionAlpha();
 
@@ -5804,15 +5805,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             final FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) avatarContainer.getLayoutParams();
             if (params != null) {
                 final int maxSize = AndroidUtilities.dp(92);
-                int targetSize = (int) AndroidUtilities.lerp(maxSize, listView.getMeasuredWidth(), value);
+                int targetSize = (int) AndroidUtilities.lerp(maxSize, Math.min(listView.getMeasuredWidth(), extraHeight + actionBarHeight), value);
                 params.width = params.height = targetSize;
                 
-                final int currentTopMargin = (int) (extraHeight - maxSize - AndroidUtilities.dp(72));
-                
-                params.topMargin = (int) AndroidUtilities.lerp(currentTopMargin, 0, value);
+                final int currentTopMargin = (int) (actionBarHeight + extraHeight - maxSize - AndroidUtilities.dp(144));
+                params.topMargin = AndroidUtilities.lerp(currentTopMargin, 0, value);
                 
                 avatarContainer.setLayoutParams(params);
-                avatarContainer.requestLayout();
             }
         }
 
