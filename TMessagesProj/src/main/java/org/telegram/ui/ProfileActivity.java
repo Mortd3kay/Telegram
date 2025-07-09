@@ -200,7 +200,6 @@ import org.telegram.ui.Cells.SettingsSearchCell;
 import org.telegram.ui.Cells.SettingsSuggestionCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCell;
-import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextDetailCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.UserCell;
@@ -6941,9 +6940,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (storyView != null) {
                 storyView.setActionBarActionMode(value);
             }
-            if (giftsView != null) {
-                giftsView.setActionBarActionMode(value);
-            }
             topView.invalidate();
 
             int color1 = getThemedColor(Theme.key_profile_title);
@@ -7811,6 +7807,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         avatarContainer.setLayoutParams(params);
         avatarContainer.requestLayout();
+
+        if (giftsView != null) {
+            giftsView.setMagnetProgress(Math.min(1f, extraHeight / AndroidUtilities.dp(200f)));
+        }
     }
 
     public RecyclerListView getListView() {
