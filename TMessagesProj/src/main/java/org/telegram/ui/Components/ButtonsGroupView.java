@@ -72,7 +72,7 @@ public class ButtonsGroupView extends FrameLayout {
     private final Paint backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF buttonRect = new RectF();
-    private float baseBackgroundAlpha = 0.10f;
+    private float baseBackgroundAlpha = 0.20f;
     private float disabledContentAlpha = 0.5f;
     private int pressedButtonIndex = -1;
     private int clickedButtonIndex = -1;
@@ -87,7 +87,7 @@ public class ButtonsGroupView extends FrameLayout {
         super(context);
         this.resourcesProvider = resourcesProvider;
         setWillNotDraw(false);
-        backgroundPaint.setColor(Color.BLACK);
+        backgroundPaint.setColor(Color.DKGRAY);
         textPaint.setColor(Color.WHITE);
         textPaint.setTextAlign(Paint.Align.CENTER);
         progressToExpand = 1.0f;

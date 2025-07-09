@@ -1338,7 +1338,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             final int actionBarHeight = statusBarHeight + ActionBar.getCurrentActionBarHeight();
             final float k = 0.5f;
             topOverlayRect.set(0, 0, w, (int) (actionBarHeight * k));
-            bottomOverlayRect.set(0, (int) (h - AndroidUtilities.dp(72f) * k), w, h);
+            bottomOverlayRect.set(0, (int) h, w, h);
             topOverlayGradient.setBounds(0, topOverlayRect.bottom, w, actionBarHeight + AndroidUtilities.dp(16f));
             bottomOverlayGradient.setBounds(0, h - AndroidUtilities.dp(72f) - AndroidUtilities.dp(80f), w, bottomOverlayRect.top);
             pressedOverlayGradient[0].setBounds(0, 0, w / 5, h);
@@ -4633,6 +4633,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 avatarImage.clearForeground();
                 doNotSetForeground = false;
                 updateStoriesViewBounds(false);
+                updateAvatarContainerPosition();
             }
         });
         updateRowsIds();
@@ -7905,6 +7906,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         fixLayout();
         updateNameAndOnlinePosition();
         updateAvatarContainerPosition();
+        updateButtonsGroupViewPosition();
+        updateButtonsRow();
     }
 
     private void invalidateIsInLandscapeMode() {
