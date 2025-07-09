@@ -1165,7 +1165,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             }
                         }
 
-                        float patternOffsetY = -dp(16);
+                        float patternOffsetY = -dp(8);
                         if (extraHeight > dp(200)) {
                             float additionalOffset = (extraHeight - dp(200)) * 0.5f;
                             patternOffsetY += additionalOffset;
@@ -7670,7 +7670,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
 
-        final int actionBarHeight = (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight();
+        final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
         final float screenWidth = avatarContainer2.getMeasuredWidth();
         
         float nameScale;
@@ -7696,9 +7696,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         nameTextView[1].setScaleX(nameScale);
         nameTextView[1].setScaleY(nameScale);
 
-        float nameY = extraHeight - AndroidUtilities.dp(56f);
-        float minNameY = actionBarHeight - AndroidUtilities.dp(52);
-        nameY = Math.max(minNameY, nameY);
+        float nameY = actionBarHeight - AndroidUtilities.dp(52);
+        nameY = Math.max(nameY, nameY + extraHeight - AndroidUtilities.dp(72f));
         float onlineY = nameY + nameTextView[1].getMeasuredHeight() - AndroidUtilities.dp(4);
 
         float nameTextWidth = Math.min(nameTextView[1].getPaint().measureText(nameTextView[1].getText().toString()) * nameScale + nameTextView[1].getSideDrawablesSize(), avatarContainer2.getMeasuredWidth() - AndroidUtilities.dp(48));
@@ -7773,6 +7772,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
 
+        final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
         final int baseSize = AndroidUtilities.dp(32);
         final int maxSize = AndroidUtilities.dp(92);
         
@@ -7800,9 +7800,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         params.width = params.height = targetSize;
 
         if (extraHeight > AndroidUtilities.dp(200f)) {
-            params.topMargin = (int) (extraHeight - maxSize - AndroidUtilities.dp(72));
+            params.topMargin = (int) (actionBarHeight + extraHeight - maxSize - AndroidUtilities.dp(144));
         } else {
-            params.topMargin = (int) (extraHeight - targetSize - AndroidUtilities.dp(72));
+            params.topMargin = (int) (actionBarHeight + extraHeight - targetSize - AndroidUtilities.dp(144));
         }
 
         avatarContainer.setLayoutParams(params);
