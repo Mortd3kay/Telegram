@@ -7476,15 +7476,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
 
             if (openAnimationInProgress && playProfileAnimation == 2) {
-                float avX = 0;
-                float avY = (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight() / 2.0f - 21 * AndroidUtilities.density + actionBar.getTranslationY();
-
-                nameTextView[0].setTranslationX(0);
-                nameTextView[0].setTranslationY((float) Math.floor(avY) + AndroidUtilities.dp(1.3f));
-                onlineTextView[0].setTranslationX(0);
-                onlineTextView[0].setTranslationY((float) Math.floor(avY) + AndroidUtilities.dp(24));
-                nameTextView[0].setScaleX(1.0f);
-                nameTextView[0].setScaleY(1.0f);
 
                 if (storyView != null) {
                     storyView.setExpandProgress(1f);
@@ -7699,7 +7690,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         float nameY = actionBarHeight - AndroidUtilities.dp(52);
         nameY = Math.max(nameY, nameY + extraHeight - AndroidUtilities.dp(72f));
-        float onlineY = nameY + nameTextView[1].getMeasuredHeight() - AndroidUtilities.dp(4);
+        
+        float onlineY = nameY + AndroidUtilities.dp(28);
+        if (nameTextView[1].getMeasuredHeight() != 0) {
+            onlineY = nameY + nameTextView[1].getMeasuredHeight() - AndroidUtilities.dp(4);
+        }
 
         float nameTextWidth = Math.min(nameTextView[1].getPaint().measureText(nameTextView[1].getText().toString()) * nameScale + nameTextView[1].getSideDrawablesSize(), avatarContainer2.getMeasuredWidth() - AndroidUtilities.dp(48));
         float onlineTextWidth = onlineTextView[1].getPaint().measureText(onlineTextView[1].getText().toString()) + onlineTextView[1].getRightDrawableWidth();
@@ -7744,7 +7739,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         FrameLayout.LayoutParams onlineParams = (FrameLayout.LayoutParams) onlineTextView[1].getLayoutParams();
         if (onlineParams != null) {
             onlineParams.topMargin = (int) onlineY;
-            onlineParams.leftMargin = (int) onlineX - AndroidUtilities.dp(2);
+            onlineParams.leftMargin = (int) (onlineX - AndroidUtilities.dpf2(2f));
             onlineTextView[1].setLayoutParams(onlineParams);
         }
         
@@ -7752,10 +7747,27 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             FrameLayout.LayoutParams mediaParams = (FrameLayout.LayoutParams) mediaCounterTextView.getLayoutParams();
             if (mediaParams != null) {
                 mediaParams.topMargin = (int) onlineY;
-                mediaParams.leftMargin = (int) onlineX - AndroidUtilities.dp(2);
+                mediaParams.leftMargin = (int) (onlineX - AndroidUtilities.dpf2(2f));
                 mediaCounterTextView.setLayoutParams(mediaParams);
             }
         }
+        
+        if (nameTextView[0] != null && onlineTextView[0] != null) {
+            FrameLayout.LayoutParams nameParams0 = (FrameLayout.LayoutParams) nameTextView[0].getLayoutParams();
+            if (nameParams0 != null) {
+                nameParams0.topMargin = (int) nameY;
+                nameParams0.leftMargin = (int) nameX;
+                nameTextView[0].setLayoutParams(nameParams0);
+            }
+            
+            FrameLayout.LayoutParams onlineParams0 = (FrameLayout.LayoutParams) onlineTextView[0].getLayoutParams();
+            if (onlineParams0 != null) {
+                onlineParams0.topMargin = (int) onlineY;
+                onlineParams0.leftMargin = (int) onlineX;
+                onlineTextView[0].setLayoutParams(onlineParams0);
+            }
+        }
+        
         needLayoutText(Math.min(1f, extraHeight / AndroidUtilities.dp(200f)));
     }
 
