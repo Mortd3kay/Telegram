@@ -1251,7 +1251,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             topOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{0x42000000, 0});
             topOverlayGradient.setShape(GradientDrawable.RECTANGLE);
 
-            bottomOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0x42000000, 0});
+            bottomOverlayGradient = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{0x84000000, 0});
             bottomOverlayGradient.setShape(GradientDrawable.RECTANGLE);
 
             for (int i = 0; i < 2; i++) {
@@ -7755,16 +7755,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 nameX = AndroidUtilities.dp(64);
                 onlineX = nameX;
             }
-        } else if (extraHeight <= AndroidUtilities.dp(200f)) {
+        } else if (extraHeight <= AndroidUtilities.dp(150f)) {
             if (openAnimationInProgress) {
-                float progress = (extraHeight - AndroidUtilities.dp(100f)) / AndroidUtilities.dp(100f);
+                float progress = (extraHeight - AndroidUtilities.dp(100f)) / AndroidUtilities.dp(50f);
                 nameX = AndroidUtilities.lerp(AndroidUtilities.dp(118), centerNameX, progress);
                 onlineX = AndroidUtilities.lerp(AndroidUtilities.dp(118), centerOnlineX, progress);
             } else {
-                float progress = (extraHeight - AndroidUtilities.dp(100f)) / AndroidUtilities.dp(100f);
+                float progress = (extraHeight - AndroidUtilities.dp(100f)) / AndroidUtilities.dp(50f);
                 nameX = AndroidUtilities.lerp(AndroidUtilities.dp(64), centerNameX, progress);
                 onlineX = AndroidUtilities.lerp(AndroidUtilities.dp(64), centerOnlineX, progress);
             }
+        } else if (extraHeight <= AndroidUtilities.dp(200f)) {
+            nameX = centerNameX;
+            onlineX = centerOnlineX;
         } else if (extraHeight <= AndroidUtilities.dp(230f)) {
             nameX = centerNameX;
             onlineX = centerOnlineX;
@@ -7848,21 +7851,24 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         } else {
             float expandProgress = Math.min(1f, (extraHeight - AndroidUtilities.dp(250f)) / AndroidUtilities.dp(50f));
             targetSize = (int) AndroidUtilities.lerp(maxSize, listView.getMeasuredWidth(), expandProgress);
-            if (avatarImage != null) {
-                int radius;
-                if (extraHeight <= AndroidUtilities.dp(250f)) {
-                    radius = maxSize / 2;
-                } else {
-                    radius = (int) AndroidUtilities.lerp(maxSize / 2, 0, expandProgress);
-                }
-                avatarImage.setRoundRadius(radius);
+        }
+
+        if (avatarImage != null) {
+            int radius;
+            if (extraHeight <= AndroidUtilities.dp(250f)) {
+                radius = maxSize / 2;
+            } else {
+                float expandProgress = Math.min(1f, (extraHeight - AndroidUtilities.dp(250f)) / AndroidUtilities.dp(50f));
+                radius = (int) AndroidUtilities.lerp(maxSize / 2, 0, expandProgress);
             }
+            avatarImage.setRoundRadius(radius);
         }
 
         params.width = params.height = targetSize;
 
         if (extraHeight > AndroidUtilities.dp(200f)) {
-            params.topMargin = (int) (actionBarHeight + extraHeight - maxSize - AndroidUtilities.dp(144));
+            params.leftMargin = 0;
+            params.topMargin = openAnimationInProgress ? 0 : (int) (actionBarHeight + extraHeight - maxSize - AndroidUtilities.dp(144));
         } else {
             if (openAnimationInProgress) {
                 int initialLeftMargin = -(AndroidUtilities.displaySize.x - params.width) / 2 + AndroidUtilities.dp(64);
@@ -7872,12 +7878,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 params.leftMargin = (int) AndroidUtilities.lerp(initialLeftMargin, finalLeftMargin, progress);
                 params.topMargin = (int) AndroidUtilities.lerp(initialTopMargin, finalTopMargin, progress);
             } else {
+                params.leftMargin = 0;
                 params.topMargin = (int) (actionBarHeight + extraHeight - targetSize - AndroidUtilities.dp(144));
             }
         }
 
         avatarContainer.setLayoutParams(params);
-        avatarContainer.requestLayout();
     }
 
     public RecyclerListView getListView() {
@@ -8652,6 +8658,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             onlineTextView[i].setTextColor(ColorUtils.blendARGB(i == 0 ? subtitleColor : applyPeerColor(subtitleColor, true, isOnline[0]), i == 0 ? color : applyPeerColor(color, true, isOnline[0]), progress));
         }
         extraHeight = initialAnimationExtraHeight * progress;
+        updateNameAndOnlinePosition();
         color = AvatarDrawable.getProfileColorForId(userId != 0 ? userId : chatId, resourcesProvider);
         int color2 = AvatarDrawable.getColorForId(userId != 0 ? userId : chatId);
         if (color != color2) {
