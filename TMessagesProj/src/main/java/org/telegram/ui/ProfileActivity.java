@@ -4168,7 +4168,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         frameLayout.addView(avatarContainer2, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.START, 0, 0, 0, 0));
         avatarContainer.setPivotX(AndroidUtilities.dp(21));
         avatarContainer.setPivotY(AndroidUtilities.dp(21));
-        avatarContainer2.addView(avatarContainer, LayoutHelper.createFrame(42, 42, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 0));
         avatarImage = new AvatarImageView(context) {
             @Override
             public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
@@ -4488,6 +4487,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         avatarContainer2.addView(storyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         giftsView = new ProfileGiftsView(context, currentAccount, getDialogId(), avatarContainer, avatarImage, resourcesProvider);
         avatarContainer2.addView(giftsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        avatarContainer2.addView(avatarContainer, LayoutHelper.createFrame(42, 42, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 0));
         buttonsGroupView = new ButtonsGroupView(context);
         buttonsGroupView.setOnItemClickListener(new ButtonsGroupView.OnItemClickListener() {
             @Override
@@ -5805,7 +5805,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             final FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) avatarContainer.getLayoutParams();
             if (params != null) {
                 final int maxSize = AndroidUtilities.dp(92);
-                int targetSize = (int) AndroidUtilities.lerp(maxSize, Math.min(listView.getMeasuredWidth(), extraHeight + actionBarHeight), value);
+                int targetSize = (int) AndroidUtilities.lerp(maxSize, extraHeight + actionBarHeight, value);
                 params.width = params.height = targetSize;
                 
                 final int currentTopMargin = (int) (actionBarHeight + extraHeight - maxSize - AndroidUtilities.dp(144));
@@ -7358,7 +7358,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 storyView.setExpandCoords((float) avatarContainer2.getMeasuredWidth() / 2, false, (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + (float) ActionBar.getCurrentActionBarHeight() / 2 + AndroidUtilities.dp(8) + searchTransitionOffset);
             }
             if (giftsView != null) {
-                giftsView.setExpandCoords(avatarContainer2.getMeasuredWidth() - AndroidUtilities.dp(40), false, (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight() + extraHeight + searchTransitionOffset);
+                giftsView.setExpandCoords((actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight() + extraHeight + searchTransitionOffset);
                 giftsView.setMagnetProgress(diff);
             }
             float h = openAnimationInProgress ? initialAnimationExtraHeight : extraHeight;
@@ -7685,7 +7685,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         
         float nameScale;
         if (openAnimationInProgress && playProfileAnimation == 2) {
-            nameScale = 1.67f;
+            nameScale = 1.5f;
         } else {
             if (extraHeight <= AndroidUtilities.dp(100f)) {
                 nameScale = 1.0f;
@@ -7707,7 +7707,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         nameTextView[1].setScaleY(nameScale);
 
         float nameY = actionBarHeight - AndroidUtilities.dp(52);
-        nameY = Math.max(nameY, nameY + extraHeight - AndroidUtilities.dp(72f));
+        nameY = Math.max(nameY, nameY + extraHeight - AndroidUtilities.dp(80f));
         
         float onlineY = nameY + AndroidUtilities.dp(28);
         if (nameTextView[1].getMeasuredHeight() != 0) {

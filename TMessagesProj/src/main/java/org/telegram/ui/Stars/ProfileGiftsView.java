@@ -75,9 +75,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
 
 
     private float left, right, cy;
-    private float expandRight, expandY;
-    private boolean expandRightPad;
-    private final AnimatedFloat expandRightPadAnimated = new AnimatedFloat(this, 0, 350, CubicBezierInterpolator.EASE_OUT_QUINT);
+    private float expandY;
     private final AnimatedFloat rightAnimated = new AnimatedFloat(this, 0, 350, CubicBezierInterpolator.EASE_OUT_QUINT);
 
     public void setBounds(float left, float right, float cy, boolean animated) {
@@ -93,9 +91,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
         }
     }
 
-    public void setExpandCoords(float right, boolean rightPadded, float y) {
-        this.expandRight = right;
-        this.expandRightPad = rightPadded;
+    public void setExpandCoords(float y) {
         this.expandY = y;
         invalidate();
     }
@@ -192,7 +188,9 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             float cx, float cy,
             float ascale, float rotate,
             float alpha,
-            float gradientAlpha
+            float gradientAlpha,
+            float scaleX,
+            float scaleY
         ) {
             if (alpha <= 0.0f) return;
             final float gsz = dp(45);
@@ -201,7 +199,7 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             canvas.translate(cx, cy);
             canvas.rotate(rotate);
             final float scale = ascale * bounce.getScale(0.1f);
-            canvas.scale(scale, scale);
+            canvas.scale(scale * scaleX, scale * scaleY);
             if (gradientPaint != null) {
                 gradientPaint.setAlpha((int) (0xFF * alpha * gradientAlpha));
                 canvas.drawRect(-gsz / 2.0f, -gsz / 2.0f, gsz / 2.0f, gsz / 2.0f, gradientPaint);
@@ -338,6 +336,8 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
         final float closedAlpha = Utilities.clamp01((expandY - (AndroidUtilities.statusBarHeight + ActionBar.getCurrentActionBarHeight())) / dp(50));
         final float baseAlpha = (1.0f - expandProgress) * (closedAlpha);
         final float yDelta = dp(60) * magnetProgress - dp(40) * magnetProgress * magnetProgress;
+        
+        final float spreadDistance = dp(200) * expandProgress;
 
         for (int i = 0; i < gifts.size(); ++i) {
             final Gift gift = gifts.get(i);
@@ -345,104 +345,160 @@ public class ProfileGiftsView extends View implements NotificationCenter.Notific
             final float scale = lerp(0.5f, 1.0f, alpha);
             final int index = i;
             
+            float scaleX = 1.0f;
+            float scaleY = 1.0f;
+            
+            if (expandProgress > 0f && expandProgress < 1f) {
+                scaleX = 1.1f;
+                scaleY = 0.9f;
+            }
+            
+            float magnetDelay;
             if (index == 0) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.2f);
-                final float x = lerp(acx + dp(-60), acx, delayedMagnetProgress);
+                magnetDelay = 0.2f;
+            } else if (index == 1) {
+                magnetDelay = 0.41f;
+            } else if (index == 2) {
+                magnetDelay = 0.60f;
+            } else if (index == 3) {
+                magnetDelay = 0.25f;
+            } else if (index == 4) {
+                magnetDelay = 0.42f;
+            } else if (index == 5) {
+                magnetDelay = 0.63f;
+            } else if (index == 6) {
+                magnetDelay = 0.13f;
+            } else if (index == 7) {
+                magnetDelay = 0.1f;
+            } else if (index == 8) {
+                magnetDelay = 0.38f;
+            } else {
+                magnetDelay = 0.0f;
+            }
+            
+            final float delayedMagnetProgress = Math.max(0, magnetProgress - magnetDelay);
+            
+            if (delayedMagnetProgress > 0f) {
+                scaleX *= lerp(1.0f, 1.3f, delayedMagnetProgress);
+                scaleY *= lerp(1.0f, 0.7f, delayedMagnetProgress);
+            }
+            
+            if (index == 0) {
+                final float baseX = lerp(acx + dp(-60), acx, delayedMagnetProgress);
+                final float x = baseX - spreadDistance;
                 final float y = lerp(acy + dp(-44), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, -65 + 90,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 1) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.41f);
-                final float x = lerp(acx + dp(77), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(77), acx, delayedMagnetProgress);
+                final float x = baseX + spreadDistance;
                 final float y = lerp(acy + dp(-39), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, -4.0f,
                     alpha * alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 2) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.60f);
-                final float x = lerp(acx + dp(101), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(101), acx, delayedMagnetProgress);
+                final float x = baseX + spreadDistance * 1.2f;
                 final float y = lerp(acy + dp(-8), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, 8.0f,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 3) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.25f);
-                final float x = lerp(acx + dp(65), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(65), acx, delayedMagnetProgress);
+                final float x = baseX + spreadDistance * 0.8f;
                 final float y = lerp(acy + dp(30), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, 3.0f,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 4) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.42f);
-                final float x = lerp(acx + dp(-72), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(-72), acx, delayedMagnetProgress);
+                final float x = baseX - spreadDistance * 0.9f;
                 final float y = lerp(acy + dp(33), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, -3.0f,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 5) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.63f);
-                final float x = lerp(acx + dp(-102), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(-102), acx, delayedMagnetProgress);
+                final float x = baseX - spreadDistance * 1.1f;
                 final float y = lerp(acy + dp(-5), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, 2.0f,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 6) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.13f);
-                final float x = lerp(acx + dp(-112), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(-112), acx, delayedMagnetProgress);
+                final float x = baseX - spreadDistance * 1.3f;
                 final float y = lerp(acy + dp(51), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, 0,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 7) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.1f);
-                final float x = lerp(acx + dp(117), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(117), acx, delayedMagnetProgress);
+                final float x = baseX + spreadDistance * 1.4f;
                 final float y = lerp(acy + dp(39), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, -5.0f,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             } else if (index == 8) {
-                final float delayedMagnetProgress = Math.max(0, magnetProgress - 0.38f);
-                final float x = lerp(acx + dp(35), acx, delayedMagnetProgress);
+                final float baseX = lerp(acx + dp(35), acx, delayedMagnetProgress);
+                final float x = baseX + spreadDistance * 0.7f;
                 final float y = lerp(acy + dp(-52), acy, delayedMagnetProgress) + yDelta;
                 gift.draw(
                     canvas,
                     x, y,
                     scale, 5.0f,
                     alpha * baseAlpha * (1.0f - delayedMagnetProgress),
-                    1.0f
+                    1.0f,
+                    scaleX,
+                    scaleY
                 );
             }
         }
