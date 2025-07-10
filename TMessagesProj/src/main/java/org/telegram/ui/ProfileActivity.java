@@ -7333,6 +7333,24 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             updateAvatarContainerPosition();
 
+            if (avatarImage != null) {
+                float blackAlpha = 0f;
+                if (extraHeight < AndroidUtilities.dp(150f)) {
+                    if (extraHeight <= AndroidUtilities.dp(50f)) {
+                        blackAlpha = 1f;
+                    } else {
+                        float progress = (extraHeight - AndroidUtilities.dp(50f)) / AndroidUtilities.dp(100f);
+                        blackAlpha = 1f - progress;
+                    }
+                }
+                if (blackAlpha > 0f) {
+                    avatarImage.setColorFilter(new PorterDuffColorFilter(
+                            Color.argb((int)(blackAlpha * 255), 0, 0, 0), PorterDuff.Mode.SRC_ATOP));
+                } else {
+                    avatarImage.setColorFilter(null);
+                }
+            }
+
             listView.setTopGlowOffset((int) extraHeight);
 
             listView.setOverScrollMode(extraHeight > AndroidUtilities.dp(200f) && extraHeight < listView.getMeasuredWidth() - newTop ? View.OVER_SCROLL_NEVER : View.OVER_SCROLL_ALWAYS);
@@ -7341,6 +7359,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             if (giftsView != null) {
                 giftsView.setExpandCoords(avatarContainer2.getMeasuredWidth() - AndroidUtilities.dp(40), false, (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight() + extraHeight + searchTransitionOffset);
+                giftsView.setMagnetProgress(diff);
             }
             float h = openAnimationInProgress ? initialAnimationExtraHeight : extraHeight;
             if (h > AndroidUtilities.dp(200f) || isPulledDown) {
@@ -7785,7 +7804,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
 
         final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
-        final int baseSize = AndroidUtilities.dp(32);
+        final int baseSize = AndroidUtilities.dp(24);
         final int maxSize = AndroidUtilities.dp(92);
         
         int targetSize;
@@ -7819,10 +7838,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         avatarContainer.setLayoutParams(params);
         avatarContainer.requestLayout();
-
-        if (giftsView != null) {
-            giftsView.setMagnetProgress(Math.min(1f, extraHeight / AndroidUtilities.dp(200f)));
-        }
     }
 
     public RecyclerListView getListView() {
