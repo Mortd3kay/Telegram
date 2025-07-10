@@ -7362,7 +7362,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
             if (avatarImage != null) {
                 float blackAlpha = 0f;
-                if (extraHeight < AndroidUtilities.dp(150f)) {
+                if (extraHeight < AndroidUtilities.dp(150f) && !openAnimationInProgress) {
                     if (extraHeight <= AndroidUtilities.dp(50f)) {
                         blackAlpha = 1f;
                     } else {
@@ -7830,6 +7830,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
 
+        float progress = extraHeight / AndroidUtilities.dp(200f);
         final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
         final int baseSize = AndroidUtilities.dp(24);
         final int maxSize = AndroidUtilities.dp(92);
@@ -7837,8 +7838,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         int targetSize;
         
         if (extraHeight <= AndroidUtilities.dp(200f)) {
-            float progress = extraHeight / AndroidUtilities.dp(200f);
-            targetSize = (int) AndroidUtilities.lerp(baseSize, maxSize, progress);
+            if (openAnimationInProgress) {
+                targetSize = (int) AndroidUtilities.lerp(AndroidUtilities.dp(42), maxSize, progress);
+            } else {
+                targetSize = (int) AndroidUtilities.lerp(baseSize, maxSize, progress);
+            }
         } else if (extraHeight <= AndroidUtilities.dp(250f)) {
             targetSize = maxSize;
         } else {
@@ -7860,7 +7864,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (extraHeight > AndroidUtilities.dp(200f)) {
             params.topMargin = (int) (actionBarHeight + extraHeight - maxSize - AndroidUtilities.dp(144));
         } else {
-            params.topMargin = (int) (actionBarHeight + extraHeight - targetSize - AndroidUtilities.dp(144));
+            if (openAnimationInProgress) {
+                int initialLeftMargin = -(AndroidUtilities.displaySize.x - params.width) / 2 + AndroidUtilities.dp(64);
+                int initialTopMargin = actionBarHeight - AndroidUtilities.dp(52);
+                int finalLeftMargin = 0;
+                int finalTopMargin = (int) (actionBarHeight + extraHeight - targetSize - AndroidUtilities.dp(144));
+                params.leftMargin = (int) AndroidUtilities.lerp(initialLeftMargin, finalLeftMargin, progress);
+                params.topMargin = (int) AndroidUtilities.lerp(initialTopMargin, finalTopMargin, progress);
+            } else {
+                params.topMargin = (int) (actionBarHeight + extraHeight - targetSize - AndroidUtilities.dp(144));
+            }
         }
 
         avatarContainer.setLayoutParams(params);
