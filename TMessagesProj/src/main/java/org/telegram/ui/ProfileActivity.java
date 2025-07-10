@@ -486,6 +486,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private HashMap<Integer, Integer> positionToOffset = new HashMap<>();
 
     private float listViewVelocityY;
+    private float initialViewTop = 0f;
+    private boolean isNewTouch = true;
     private ValueAnimator expandAnimator;
     private float currentExpandAnimatorValue;
     private float currentExpanAnimatorFracture;
@@ -3106,11 +3108,25 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         velocityTracker.clear();
                     }
                     velocityTracker.addMovement(e);
+                    
+                    initialViewTop = 0f;
+                    final View view = layoutManager.findViewByPosition(0);
+                    if (view != null) {
+                        initialViewTop = view.getTop();
+                    }
                 } else if (action == MotionEvent.ACTION_MOVE) {
                     if (velocityTracker != null) {
                         velocityTracker.addMovement(e);
                         velocityTracker.computeCurrentVelocity(1000);
                         listViewVelocityY = velocityTracker.getYVelocity(e.getPointerId(e.getActionIndex()));
+                    }
+                    
+                    if (isNewTouch) {
+                        final View view = layoutManager.findViewByPosition(0);
+                        if (view != null) {
+                            initialViewTop = view.getTop();
+                        }
+                        isNewTouch = false;
                     }
                 } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
                     if (velocityTracker != null) {
@@ -3120,12 +3136,23 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
                 final boolean result = super.onTouchEvent(e);
                 if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-                    if (allowPullingDown) {
-                        final View view = layoutManager.findViewByPosition(0);
-                        if (view != null) {
+                    isNewTouch = true;
+                    final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+                    final View view = layoutManager.findViewByPosition(0);
+                    if (view != null) {
+                        if (allowPullingDown) {
                             if (isPulledDown) {
-                                final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
                                 listView.smoothScrollBy(0, view.getTop() - listView.getMeasuredWidth() + actionBarHeight, CubicBezierInterpolator.EASE_OUT_QUINT);
+                            } else {
+                                listView.smoothScrollBy(0, view.getTop() - AndroidUtilities.dp(200), CubicBezierInterpolator.EASE_OUT_QUINT);
+                            }
+                        } else if (view.getTop() > 0) {
+                            if (initialViewTop < AndroidUtilities.dp(50) && view.getTop() >= AndroidUtilities.dp(50)) {
+                                listView.smoothScrollBy(0, view.getTop() - AndroidUtilities.dp(200), CubicBezierInterpolator.EASE_OUT_QUINT);
+                            } else if (initialViewTop > AndroidUtilities.dp(150) && view.getTop() < AndroidUtilities.dp(150)) {
+                                listView.smoothScrollBy(0, view.getTop(), CubicBezierInterpolator.EASE_OUT_QUINT);
+                            } else if (view.getTop() < AndroidUtilities.dp(100)) {
+                                listView.smoothScrollBy(0, view.getTop(), CubicBezierInterpolator.EASE_OUT_QUINT);
                             } else {
                                 listView.smoothScrollBy(0, view.getTop() - AndroidUtilities.dp(200), CubicBezierInterpolator.EASE_OUT_QUINT);
                             }
@@ -4195,6 +4222,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         avatarImage.setRoundRadius(getSmallAvatarRoundRadius());
         avatarImage.setPivotX(0);
         avatarImage.setPivotY(0);
+        giftsView = new ProfileGiftsView(context, currentAccount, getDialogId(), avatarContainer, avatarImage, resourcesProvider);
+        avatarContainer2.addView(giftsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        avatarContainer2.addView(avatarContainer, LayoutHelper.createFrame(42, 42, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 0));
         avatarContainer.addView(avatarImage, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         avatarImage.setOnClickListener(v -> {
             if (avatarBig != null) {
@@ -4485,9 +4515,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             avatarImage.setHasStories(needInsetForStories());
         }
         avatarContainer2.addView(storyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        giftsView = new ProfileGiftsView(context, currentAccount, getDialogId(), avatarContainer, avatarImage, resourcesProvider);
-        avatarContainer2.addView(giftsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        avatarContainer2.addView(avatarContainer, LayoutHelper.createFrame(42, 42, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 0, 0, 0));
         buttonsGroupView = new ButtonsGroupView(context);
         buttonsGroupView.setOnItemClickListener(new ButtonsGroupView.OnItemClickListener() {
             @Override
