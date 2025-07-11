@@ -4624,6 +4624,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     searchItem.setEnabled(!scrolling && !isPulledDown);
                 }
                 sharedMediaLayout.scrollingByUser = listView.scrollingByUser;
+                
+                final View view = layoutManager.findViewByPosition(0);
+                if (newState == RecyclerView.SCROLL_STATE_IDLE && !allowPullingDown && view != null && view.getTop() > 0) {
+                    if (view.getTop() < AndroidUtilities.dp(50)) {
+                        listView.smoothScrollBy(0, view.getTop(), CubicBezierInterpolator.EASE_OUT_QUINT);
+                    } else {
+                        listView.smoothScrollBy(0, view.getTop() - AndroidUtilities.dp(200), CubicBezierInterpolator.EASE_OUT_QUINT);
+                    }
+                }
             }
 
             @Override
@@ -4920,7 +4929,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                     }
                 } else {
-                    if (ChatObject.canSendMessages(currentChat)) {
+                    if (ChatObject.canSendMessages(currentChat) || userId != 0 || chatInfo != null && chatInfo.linked_chat_id != 0) {
                         messageButtonItem = buttonsGroupView.addItem(send_message, R.drawable.profile_message);
                         if (messageButtonItem != null) {
                             messageButtonItem.setText(LocaleController.getString(R.string.Message));
@@ -4946,7 +4955,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         }
                     }
                 }
-                if (currentChat.creator) {
+                if (currentChat.creator && ChatObject.isChannel(currentChat)) {
                     addStoryButtonItem = buttonsGroupView.addItem(add_story, R.drawable.profile_add_story);
                     if (addStoryButtonItem != null) {
                         addStoryButtonItem.setText(LocaleController.getString(R.string.AddStory));
@@ -4966,9 +4975,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     setProfilePhotoButtonItem.setText(LocaleController.getString(R.string.AddPhoto));
                 }
             }
-            copyLinkToProfileButtonItem = buttonsGroupView.addItem(copy_link_profile, R.drawable.msg_link2);
-            if (copyLinkToProfileButtonItem != null) {
-                copyLinkToProfileButtonItem.setText(LocaleController.getString(R.string.ProfileCopyLink));
+            addStoryButtonItem = buttonsGroupView.addItem(add_story, R.drawable.profile_add_story);
+            if (addStoryButtonItem != null) {
+                addStoryButtonItem.setText(LocaleController.getString(R.string.AddStory));
             }
         }
     }
@@ -6213,6 +6222,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
             }
+        } else if (ChatObject.canSendMessages(currentChat)) {
+            finishFragment();
         } else {
             openDiscussion();
         }
@@ -8324,6 +8335,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
         }
         updateButtonsRow();
+        updateNameAndOnlinePosition();
+        updateButtonsGroupViewPosition();
     }
 
     private void updateAutoDeleteItem() {
