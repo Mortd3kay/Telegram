@@ -3605,6 +3605,15 @@
     <string name="SuggestedPostAcceptTitle">Accept Terms</string>
     <string name="Call">Call</string>
     <string name="VideoCall">Video Call</string>
+    <string name="Video">Video</string>
+    <string name="Share">Share</string>
+    <string name="Join">Join</string>
+    <string name="Leave">Leave</string>
+    <string name="Discuss">Discuss</string>
+    <string name="Gift">Gift</string>
+    <string name="LiveStream">Live Stream</string>
+    <string name="VoiceChat">Voice Chat</string>
+    <string name="Restart">Restart</string>
     <string name="Copy">Copy</string>
     <string name="Restrict">Restrict</string>
     <string name="Ban">Ban</string>
@@ -5253,8 +5262,8 @@
     <string name="AutoDeleteAfter">Auto-delete after %s</string>
     <string name="AutoDeleteAfterShort">After %s</string>
     <string name="ChooseTimeForMute">Choose time</string>
-    <string name="SoundOn">Enable sound</string>
-    <string name="SoundOff">Disable sound</string>
+    <string name="SoundOn">Enable Sound</string>
+    <string name="SoundOff">Disable Sound</string>
     <string name="MuteForPopup">Mute for...</string>
     <string name="MuteForAlert">Mute notifications for...</string>
     <string name="MuteForButton">Mute for %s</string>

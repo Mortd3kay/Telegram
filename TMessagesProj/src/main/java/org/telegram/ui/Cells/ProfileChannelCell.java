@@ -44,7 +44,6 @@ public class ProfileChannelCell extends FrameLayout {
 
     private final Theme.ResourcesProvider resourcesProvider;
 
-    private final TextView headerView;
     private final AnimatedTextView subscribersView;
 
     public final DialogCell dialogCell;
@@ -56,23 +55,6 @@ public class ProfileChannelCell extends FrameLayout {
 
         LinearLayout headerLayout = new LinearLayout(context);
         headerLayout.setOrientation(LinearLayout.HORIZONTAL);
-        addView(headerLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.FILL_HORIZONTAL | Gravity.TOP, 22, 16.6f, 22, 0));
-
-        headerView = new TextView(context);
-        headerView.setTypeface(AndroidUtilities.bold());
-        headerView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        headerView.setText(LocaleController.getString(R.string.ProfileChannel));
-        headerLayout.addView(headerView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP));
-
-        subscribersView = new ClickableAnimatedTextView(context);
-        subscribersView.getDrawable().setHacks(true, true, true);
-        subscribersView.setAnimationProperties(.3f, 0, 165, CubicBezierInterpolator.EASE_OUT_QUINT);
-        subscribersView.setTypeface(AndroidUtilities.bold());
-        subscribersView.setTextSize(dp(11));
-        subscribersView.setPadding(dp(4.33f), 0, dp(4.33f), 0);
-        subscribersView.setGravity(Gravity.LEFT);
-        headerLayout.addView(subscribersView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 17, Gravity.LEFT | Gravity.TOP, 4, 2, 4, 0));
-
         dialogCell = new DialogCell(null, context, false, true, UserConfig.selectedAccount, resourcesProvider);
         dialogCell.setBackgroundColor(0);
         dialogCell.setDialogCellDelegate(new DialogCell.DialogCellDelegate() {
@@ -125,7 +107,16 @@ public class ProfileChannelCell extends FrameLayout {
         });
         dialogCell.avatarStart = 15;
         dialogCell.messagePaddingStart = 83;
-        addView(dialogCell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.FILL_HORIZONTAL | Gravity.BOTTOM));
+        addView(dialogCell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.FILL_HORIZONTAL, 0, dp(2), 0, dp(2)));
+
+        subscribersView = new ClickableAnimatedTextView(context);
+        subscribersView.getDrawable().setHacks(true, true, true);
+        subscribersView.setAnimationProperties(.3f, 0, 165, CubicBezierInterpolator.EASE_OUT_QUINT);
+        subscribersView.setTypeface(AndroidUtilities.bold());
+        subscribersView.setTextSize(dp(11));
+        subscribersView.setPadding(dp(4.33f), 0, dp(4.33f), 0);
+        subscribersView.setGravity(Gravity.LEFT);
+        headerLayout.addView(subscribersView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 17, Gravity.LEFT | Gravity.TOP, 4, 2, 4, 0));
 
         updateColors();
 
@@ -222,13 +213,6 @@ public class ProfileChannelCell extends FrameLayout {
 
         set = true;
     }
-
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(115.66f), MeasureSpec.EXACTLY));
-    }
-
 
     public static class ChannelMessageFetcher {
 
@@ -390,7 +374,6 @@ public class ProfileChannelCell extends FrameLayout {
         final int headerColor = processColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader, resourcesProvider));
         subscribersView.setTextColor(headerColor);
         subscribersView.setBackground(Theme.createRoundRectDrawable(dp(4.5f), dp(4.5f), Theme.multAlpha(headerColor, .1f)));
-        headerView.setTextColor(headerColor);
 //        titleView.setTextColor(Theme.getColor(Theme.key_chats_name, resourcesProvider));
 //        dateView.setTextColor(Theme.getColor(Theme.key_chats_date, resourcesProvider));
     }

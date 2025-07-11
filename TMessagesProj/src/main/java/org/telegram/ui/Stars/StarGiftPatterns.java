@@ -15,6 +15,37 @@ public class StarGiftPatterns {
     public static final int TYPE_ACTION = 1;
     public static final int TYPE_GIFT = 2;
     public static final int TYPE_LINK_PREVIEW = 3;
+    private static final float ALPHA_THRESHOLD = 0.001f;
+
+
+    private static final float[] dynamicProfile = new float[]{
+            -143f, 0f, 18f, 0.14f, 0.3f,
+            143f, 0f, 18f, 0.18f, 0.3f,
+
+            -55f, -75.6f, 18f, 0.13f, 0.5f,
+            55f, -75.6f, 18f, 0.10f, 0.5f,
+
+            -55f, 75.6f, 21f, 0.27f, 0.5f,
+            55f, 75.6f, 21f, 0.25f, 0.5f,
+
+            - 121f, 52.5f, 21f, 0.41f, 0.35f,
+            121f, 52.5f, 21f, 0.40f, 0.35f,
+
+            -121f, -52.5f, 19f, 0.36f, 0.35f,
+            121f, -52.5f, 19f, 0.39f, 0.35f,
+
+            -88f, 0f, 21f, 0.34f, 0.6f,
+            88f, 0f, 21f, 0.33f, 0.6f,
+
+            0, -63f, 21f, 0.5f, 1.0f,
+            0, 63f, 21f, 0.5f, 1.0f,
+
+            -55f, -36.75f, 21f, 0.43f, 0.8f,
+            55f, -36.75f, 21f, 0.40f, 0.8f,
+
+            -55f, 36.75f, 21f, 0.47f, 0.8f,
+            55f, 36.75f, 21f, 0.41f, 0.8f
+    };
 
     private static final float[][] patternLocations = new float[][] {
         {
@@ -209,4 +240,60 @@ public class StarGiftPatterns {
         }
     }
 
+    public static void drawDynamicProfilePattern(Canvas canvas, Drawable pattern, float w, float height, float progress, float alpha) {
+        if (alpha <= ALPHA_THRESHOLD) return;
+
+        final float centerX = w * 0.5f;
+        final float zeroPointY = (height - AndroidUtilities.dp(21)) * progress;
+        final float progressPlusHalf = progress + 0.5f;
+
+        for (int i = 0; i < dynamicProfile.length; i += 5) {
+            final float xOffset = dynamicProfile[i];
+            final float yOffset = dynamicProfile[i + 1];
+            final float size = dynamicProfile[i + 2];
+            final float animationStart = dynamicProfile[i + 3];
+            final float finalAlpha = dynamicProfile[i + 4];
+
+            final float finalX = centerX + dp(xOffset);
+            final float finalY = height + dp(yOffset);
+
+            float currentX, currentY, elementAlpha;
+
+            if (progress <= animationStart) {
+                currentX = centerX;
+                currentY = zeroPointY;
+                elementAlpha = alpha * (0.3f + 0.7f * (progress + animationStart));
+            } else {
+                final float animationEnd = animationStart + 0.5f;
+                if (progress >= animationEnd) {
+                    currentX = finalX;
+                    currentY = finalY;
+                    elementAlpha = alpha * finalAlpha;
+                } else {
+                    final float localProgress = (progress - animationStart) / 0.5f;
+                    final float animationProgress = cubicBezier(localProgress);
+                    final float cubicProgress = animationProgress * animationProgress * animationProgress;
+
+                    currentX = centerX + (finalX - centerX) * cubicProgress;
+                    currentY = zeroPointY + (finalY - zeroPointY) * animationProgress;
+                    elementAlpha = alpha * finalAlpha;
+                }
+            }
+
+            final float drawableSize = dp(size * Math.min(1f, progressPlusHalf));
+            final float halfSize = drawableSize * 0.5f;
+            final int left = (int) (currentX - halfSize);
+            final int top = (int) (currentY - halfSize);
+            final int right = (int) (currentX + halfSize);
+            final int bottom = (int) (currentY + halfSize);
+
+            pattern.setBounds(left, top, right, bottom);
+            pattern.setAlpha((int) (255 * elementAlpha));
+            pattern.draw(canvas);
+        }
+    }
+
+    private static float cubicBezier(float t) {
+        return t * t * (3.0f - 2.0f * t);
+    }
 }
