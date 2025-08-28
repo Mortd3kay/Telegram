@@ -56,7 +56,6 @@ import android.text.Spanned;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.style.ImageSpan;
-import android.util.Log;
 import android.util.LongSparseArray;
 import android.util.Property;
 import android.util.StateSet;
@@ -3032,9 +3031,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private Drawable premiumStar;
 
     public void updateStatus(TLRPC.User user, boolean animated) {
-        if (dialogStoriesCell != null) {
-            dialogStoriesCell.updateStatus(user, animated);
-        }
         if (statusDrawable == null || actionBar == null) {
             return;
         }
@@ -3261,9 +3257,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (actionBar != null && selectAnimatedEmojiDialog != null && selectAnimatedEmojiDialog.getContentView() instanceof SelectAnimatedEmojiDialog) {
             SimpleTextView textView = actionBar.getTitleTextView();
             ((SelectAnimatedEmojiDialog) selectAnimatedEmojiDialog.getContentView()).setScrimDrawable(textView != null && textView.getRightDrawable() == statusDrawable ? statusDrawable : null, textView);
-        }
-        if (dialogStoriesCell != null) {
-            dialogStoriesCell.setTitleOverlayText(title, titleId);
         }
     }
 
@@ -5325,7 +5318,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 return !actionBar.isActionModeShowed() && super.dispatchTouchEvent(ev);
             }
         };
-        dialogStoriesCell.setActionBar(actionBar);
         dialogStoriesCell.setMenuItemsOffset(isArchive() ? dp(68) : dpf2(16.66f));
         dialogStoriesCell.allowGlobalUpdates = false;
         dialogStoriesCell.setVisibility(View.GONE);
