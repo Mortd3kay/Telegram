@@ -74,6 +74,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -3945,7 +3946,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
 
                 boolean lastDragging;
-
+                private Interpolator interpolator = new OvershootInterpolator();
                 ValueAnimator storiesOverscrollAnimator;
                 @Override
                 public void onScrollStateChanged(int state) {
@@ -3966,7 +3967,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             }
                         });
                         storiesOverscrollAnimator.setDuration(200);
-                        storiesOverscrollAnimator.setInterpolator(CubicBezierInterpolator.DEFAULT);
+                        storiesOverscrollAnimator.setInterpolator(interpolator);
                         storiesOverscrollAnimator.start();
                     }
                 }

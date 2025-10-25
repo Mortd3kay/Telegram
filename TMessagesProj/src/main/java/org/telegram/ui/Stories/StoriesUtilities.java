@@ -388,19 +388,19 @@ public class StoriesUtilities {
             }
             float startAngle = -90;
             float endAngle = 90;
-            drawSegment(canvas, rectTmp, localPaint, startAngle, endAngle, params, isForum);
+            drawSegment(canvas, rectTmp, localPaint, startAngle, endAngle, isForum);
             startAngle = 90;
             endAngle = 270;
-            drawSegment(canvas, rectTmp, localPaint, startAngle, endAngle, params, isForum);
+            drawSegment(canvas, rectTmp, localPaint, startAngle, endAngle, isForum);
 
             if (params.progressToSegments != 1 && localPaint != globalPaint) {
                 globalPaint.setAlpha((int) (255 * (1f - params.progressToSegments)));
                 startAngle = -90;
                 endAngle = 90;
-                drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, params, isForum);
+                drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, isForum);
                 startAngle = 90;
                 endAngle = 270;
-                drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, params, isForum);
+                drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, isForum);
                 globalPaint.setAlpha(255);
             }
             // canvas.drawCircle(rectTmp.centerX(), rectTmp.centerY(), rectTmp.width() / 2f, localPaint);
@@ -439,12 +439,12 @@ public class StoriesUtilities {
                 startAngle += gapLen;
                 endAngle -= gapLen;
 
-                drawSegment(canvas, rectTmp, segmentPaint, startAngle, endAngle, params, isForum);
+                drawSegment(canvas, rectTmp, segmentPaint, startAngle, endAngle, isForum);
                 if (params.progressToSegments != 1 && segmentPaint != globalPaint) {
                     float strokeWidth = globalPaint.getStrokeWidth();
                     //globalPaint.setStrokeWidth(AndroidUtilities.lerp(segmentPaint.getStrokeWidth(), strokeWidth, 1f - params.progressToSegments));
                     globalPaint.setAlpha((int) (255 * (1f - params.progressToSegments)));
-                    drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, params, isForum);
+                    drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, isForum);
                     //  globalPaint.setStrokeWidth(strokeWidth);
                     globalPaint.setAlpha(255);
                 }
@@ -560,11 +560,7 @@ public class StoriesUtilities {
             canvas.drawRoundRect(forumRect, AndroidUtilities.dp(18), AndroidUtilities.dp(18), paint);
             return;
         }
-        if (params.progressToArc == 0) {
-            canvas.drawCircle(rectTmp.centerX(), rectTmp.centerY(), rectTmp.width() / 2f, paint);
-        } else {
-            canvas.drawArc(rectTmp, 360 + params.progressToArc / 2f, 360 - params.progressToArc, false, paint);
-        }
+        canvas.drawCircle(rectTmp.centerX(), rectTmp.centerY(), rectTmp.width() / 2f, paint);
     }
 
     private static final Path forumRoundRectPath = new Path();
@@ -572,7 +568,7 @@ public class StoriesUtilities {
     private static final PathMeasure forumRoundRectPathMeasure = new PathMeasure();
     private static final Path forumSegmentPath = new Path();
 
-    private static void drawSegment(Canvas canvas, RectF rectTmp, Paint paint, float startAngle, float endAngle, AvatarStoryParams params, boolean isForum) {
+    private static void drawSegment(Canvas canvas, RectF rectTmp, Paint paint, float startAngle, float endAngle, boolean isForum) {
         if (isForum) {
             float r = rectTmp.height() * 0.32f;
             float rotateAngle = (((int)(startAngle)) / 90) * 90 + 90;
@@ -595,19 +591,10 @@ public class StoriesUtilities {
             canvas.drawPath(forumSegmentPath, paint);
             return;
         }
-        if (!params.isFirst && !params.isLast) {
-            if (startAngle < 90) {
-                drawArcExcludeArc(canvas, rectTmp, paint, startAngle, endAngle, -params.progressToArc / 2, params.progressToArc / 2);
-            } else {
-                drawArcExcludeArc(canvas, rectTmp, paint, startAngle, endAngle, -params.progressToArc / 2 + 180, params.progressToArc / 2 + 180);
-            }
-        } else if (params.isLast) {
-            drawArcExcludeArc(canvas, rectTmp, paint, startAngle, endAngle, -params.progressToArc / 2 + 180, params.progressToArc / 2 + 180);
-        } else if (params.isFirst) {
-            // canvas.drawArc(rectTmp, startAngle, endAngle - startAngle, false, paint);
-            drawArcExcludeArc(canvas, rectTmp, paint, startAngle, endAngle, -params.progressToArc / 2, params.progressToArc / 2);
+        if (startAngle < 90) {
+            drawArcExcludeArc(canvas, rectTmp, paint, startAngle, endAngle, 0, 0);
         } else {
-            canvas.drawArc(rectTmp, startAngle, endAngle - startAngle, false, paint);
+            drawArcExcludeArc(canvas, rectTmp, paint, startAngle, endAngle, 180, 180);
         }
     }
 
@@ -1068,9 +1055,6 @@ public class StoriesUtilities {
         public int storyId;
         public TL_stories.StoryItem storyItem;
         public float progressToSegments = 1f;
-        public float progressToArc = 0;
-        public boolean isLast;
-        public boolean isFirst;
         public int globalState;
         public boolean isArchive;
         public boolean forceAnimateProgressToSegments;
