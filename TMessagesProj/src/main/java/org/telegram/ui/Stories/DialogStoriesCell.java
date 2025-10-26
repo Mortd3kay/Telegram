@@ -654,10 +654,10 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     
                     float maxYOffset = AndroidUtilities.dp(10);
                     float amplitudeMultiplier = getAmplitudeMultiplier(adapterPosition, animateFromPosition);
-                    float sineProgress = -(float) Math.sin(collapsedProgress * Math.PI);
-                     
+                    float sineAnimation = -(float) Math.sin(collapsedProgress * Math.PI);
+
                     cell.setTranslationX(AndroidUtilities.lerp(0, toX - cell.getLeft(), CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(collapsedProgress)));
-                    cell.setTranslationY(sineProgress * maxYOffset * amplitudeMultiplier * collapsedProgress * (1f - collapsedProgress) * 4f);
+                    cell.setTranslationY(sineAnimation * maxYOffset * amplitudeMultiplier * collapsedProgress * (1f - collapsedProgress) * 4f);
                     
                     if (drawInParent) {
                         viewsDrawInParent.add(cell);
@@ -810,6 +810,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     boolean collapsed;
     float K = 0.3f;
     ValueAnimator valueAnimator;
+    public OvershootInterpolator interpolator = new OvershootInterpolator();
 
     public void setProgressToCollapse(float progress) {
         setProgressToCollapse(progress, true);
@@ -853,14 +854,14 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     }
                 });
                 valueAnimator.setDuration(450);
-                valueAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+                valueAnimator.setInterpolator(interpolator);
                 valueAnimator.start();
             }
         }
     }
 
     private void checkCollapsedProgres() {
-        collapsedProgress = 1f - AndroidUtilities.lerp(1f - collapsedProgress1, 1f, 1f - collapsedProgress2);
+        collapsedProgress = 1f - AndroidUtilities.lerp(1f - collapsedProgress1, 1f, 1f - Math.max(collapsedProgress2, 0f));
         updateCollapsedProgress();
 
         int state = EXPANDED_STATE;
@@ -1395,7 +1396,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
 
             params.drawSegments = true;
             if (!params.forceAnimateProgressToSegments) {
-                params.progressToSegments = 1f - collapsedProgress2;
+                params.progressToSegments = 1f - Utilities.clamp(collapsedProgress2, 1f, 0f);
                 params.segmentRotationOffset = AndroidUtilities.lerp(-40f, 0f, 1f - collapsedProgress2);
             }
             params.originalAvatarRect.set(x, y, x + finalSize, y + finalSize);
@@ -1476,7 +1477,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                         params.progressToSegments = 0f;
                         ValueAnimator valueAnimator = ValueAnimator.ofFloat(0f, 1f);
                         valueAnimator.addUpdateListener(animation -> {
-                            params.progressToSegments = AndroidUtilities.lerp(0, 1f - collapsedProgress2, (float) animation.getAnimatedValue());
+                            params.progressToSegments = AndroidUtilities.lerp(0, 1f - Utilities.clamp(collapsedProgress2, 1f, 0f), (float) animation.getAnimatedValue());
                             invalidate();
                         });
                         valueAnimator.addListener(new AnimatorListenerAdapter() {
@@ -1496,7 +1497,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
 
                     if (!isSelf && crossfadeToDialog) {
                         params.crossfadeToDialog = crossfadeToDialogId;
-                        params.crossfadeToDialogProgress = progressToCollapsed2;
+                        params.crossfadeToDialogProgress = Utilities.clamp(progressToCollapsed2, 1f, 0f);
                     } else {
                         params.crossfadeToDialog = 0;
                     }
@@ -1526,9 +1527,10 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             }
             canvas.restore();
 
-            if (crossfadeToDialog && progressToCollapsed2 > 0) {
+            float clampedProgress2 = Utilities.clamp(progressToCollapsed2, 1f, 0f);
+            if (crossfadeToDialog && clampedProgress2 > 0) {
                 crossfageToAvatarImage.setImageCoords(x, y, finalSize, finalSize);
-                crossfageToAvatarImage.setAlpha(progressToCollapsed2);
+                crossfageToAvatarImage.setAlpha(clampedProgress2);
                 crossfageToAvatarImage.draw(canvas);
             }
             textViewContainer.setTranslationY(y + finalSize + AndroidUtilities.dp(7) * (1f - progressToCollapsed));

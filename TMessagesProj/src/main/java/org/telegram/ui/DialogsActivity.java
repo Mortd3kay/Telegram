@@ -3946,7 +3946,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
 
                 boolean lastDragging;
-                private Interpolator interpolator = new OvershootInterpolator();
                 ValueAnimator storiesOverscrollAnimator;
                 @Override
                 public void onScrollStateChanged(int state) {
@@ -3955,7 +3954,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         storiesOverscrollAnimator.removeAllListeners();
                         storiesOverscrollAnimator.cancel();
                     }
-                    if (viewPage.listView.getScrollState() != RecyclerView.SCROLL_STATE_DRAGGING) {
+                    if (viewPage.listView.getScrollState() != RecyclerView.SCROLL_STATE_DRAGGING && !viewPage.scroller.isRunning()) {
                         storiesOverscrollAnimator = ValueAnimator.ofFloat(storiesOverscroll, 0);
                         storiesOverscrollAnimator.addUpdateListener(animation -> {
                             setStoriesOvercroll(viewPage, (float) animation.getAnimatedValue());
@@ -4026,7 +4025,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                     canScrollDy += dp(DialogStoriesCell.HEIGHT_IN_DP);
                                 }
                                 int positiveDy = Math.abs(dy);
-                                if (canScrollDy < positiveDy) {
+                                boolean isBounceAnimation = viewPage.scroller.isRunning() && hasStories;
+                                if (canScrollDy < positiveDy && !isBounceAnimation) {
                                     measuredDy = -canScrollDy;
                                 }
                             }
@@ -4148,6 +4148,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         float newOverScroll = storiesOverscroll - dy * AndroidUtilities.lerp(0.2f, 0.5f, dialogStoriesCell.overscrollProgress());
                         setStoriesOvercroll(viewPage, newOverScroll);
                     }
+
+                    if (!isDragging && viewPage.scroller.isRunning() && !rightSlidingDialogContainer.hasFragment() && hasStories && progressToActionMode == 0) {
+                        int excess = dy - scrolled;
+                        if (excess < 0) {
+                            float newOverScroll = storiesOverscroll + Math.abs(excess);
+                            setStoriesOvercroll(viewPage, newOverScroll);
+                        }
+                    }
+
                     return scrolled;
                 }
 
@@ -5464,7 +5473,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             if (scrollY != 0 && scrollY != actionBarHeight) {
                 if (scrollY < actionBarHeight / 2) {
                     if (viewPage.listView.canScrollVertically(-1)) {
-                        viewPage.scroller.smoothScrollBy(-scrollY);
+                        viewPage.scroller.smoothScrollBy(-scrollY, 450, dialogStoriesCell.interpolator);
                         return true;
                     }
                 } else if (viewPage.listView.canScrollVertically(1)) {
