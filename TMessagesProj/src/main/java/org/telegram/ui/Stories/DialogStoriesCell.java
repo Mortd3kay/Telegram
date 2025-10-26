@@ -653,11 +653,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     toX += AndroidUtilities.dp(68);
                     
                     float maxYOffset = AndroidUtilities.dp(10);
-                    int positionOffset = adapterPosition - animateFromPosition;
-                    
-                    float step = 1.0f / (animateToDialogIds.size() - 1);
-                    int positionFromEnd = animateToDialogIds.size() - 1 - positionOffset;
-                    float amplitudeMultiplier = step * positionFromEnd;
+                    float amplitudeMultiplier = getAmplitudeMultiplier(adapterPosition, animateFromPosition);
                     float sineProgress = -(float) Math.sin(collapsedProgress * Math.PI);
                      
                     cell.setTranslationX(AndroidUtilities.lerp(0, toX - cell.getLeft(), CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(collapsedProgress)));
@@ -756,6 +752,20 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             canvas.restoreToCount(saveCount);
         }
         canvas.restore();
+    }
+
+    private float getAmplitudeMultiplier(int adapterPosition, int animateFromPosition) {
+        int positionOffset = adapterPosition - animateFromPosition;
+
+        float amplitudeMultiplier;
+        if (animateToDialogIds.size() > 1) {
+            float step = 1.0f / (animateToDialogIds.size() - 1);
+            int positionFromEnd = animateToDialogIds.size() - 1 - positionOffset;
+            amplitudeMultiplier = step * positionFromEnd;
+        } else {
+            amplitudeMultiplier = 0;
+        }
+        return amplitudeMultiplier;
     }
 
     @Override
