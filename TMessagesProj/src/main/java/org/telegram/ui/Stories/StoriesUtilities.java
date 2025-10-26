@@ -386,20 +386,20 @@ public class StoriesUtilities {
             if (storiesController.hasUnreadStories(params.dialogId)) {
                 localPaint = unreadPaint;
             }
-            float startAngle = -90;
-            float endAngle = 90;
+            float startAngle = -90 + params.segmentRotationOffset;
+            float endAngle = 90 + params.segmentRotationOffset;
             drawSegment(canvas, rectTmp, localPaint, startAngle, endAngle, isForum);
-            startAngle = 90;
-            endAngle = 270;
+            startAngle = 90 + params.segmentRotationOffset;
+            endAngle = 270 + params.segmentRotationOffset;
             drawSegment(canvas, rectTmp, localPaint, startAngle, endAngle, isForum);
 
             if (params.progressToSegments != 1 && localPaint != globalPaint) {
                 globalPaint.setAlpha((int) (255 * (1f - params.progressToSegments)));
-                startAngle = -90;
-                endAngle = 90;
+                startAngle = -90 + params.segmentRotationOffset;
+                endAngle = 90 + params.segmentRotationOffset;
                 drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, isForum);
-                startAngle = 90;
-                endAngle = 270;
+                startAngle = 90 + params.segmentRotationOffset;
+                endAngle = 270 + params.segmentRotationOffset;
                 drawSegment(canvas, rectTmp, globalPaint, startAngle, endAngle, isForum);
                 globalPaint.setAlpha(255);
             }
@@ -434,7 +434,7 @@ public class StoriesUtilities {
                         }
                     }
                 }
-                float startAngle = step * i - 90;
+                float startAngle = step * i - 90 + params.segmentRotationOffset;
                 float endAngle = startAngle + step;
                 startAngle += gapLen;
                 endAngle -= gapLen;
@@ -1067,6 +1067,7 @@ public class StoriesUtilities {
         public float progressToProgressSegments;
         public float alpha = 1f;
         public boolean drawInside;
+        public float segmentRotationOffset = 0f;
 
         private long dialogId;
         public int currentState;

@@ -1386,6 +1386,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             params.drawSegments = true;
             if (!params.forceAnimateProgressToSegments) {
                 params.progressToSegments = 1f - collapsedProgress2;
+                params.segmentRotationOffset = AndroidUtilities.lerp(-40f, 0f, 1f - collapsedProgress2);
             }
             params.originalAvatarRect.set(x, y, x + finalSize, y + finalSize);
             avatarImage.setAlpha(1f);
