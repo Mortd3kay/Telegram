@@ -5471,7 +5471,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if ((hasStories || (filterTabsView != null && filterTabsView.getVisibility() == View.VISIBLE)) && !rightSlidingDialogContainer.hasFragment()) {
             int scrollY = (int) -scrollYOffset;
             int actionBarHeight = getMaxScrollYOffset();
-            float K = 0.3f;
+            float K = 0.45f;
             if (scrollY != 0 && scrollY != actionBarHeight) {
                 if (scrollY < actionBarHeight * K) {
                     if (viewPage.listView.canScrollVertically(-1)) {

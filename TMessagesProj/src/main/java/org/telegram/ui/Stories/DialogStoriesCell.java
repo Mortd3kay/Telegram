@@ -27,6 +27,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -49,6 +51,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_stories;
+import org.telegram.messenger.BuildVars;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -67,6 +70,7 @@ import org.telegram.ui.Components.ListView.AdapterWithDiffUtils;
 import org.telegram.ui.Components.Premium.LimitReachedBottomSheet;
 import org.telegram.ui.Components.RadialProgress;
 import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.ui.Components.SeekBarView;
 import org.telegram.ui.Components.TypefaceSpan;
 import org.telegram.ui.PremiumPreviewFragment;
 import org.telegram.ui.Stories.recorder.HintView2;
@@ -75,6 +79,7 @@ import org.telegram.ui.Stories.recorder.StoryRecorder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.Objects;
 
 public class DialogStoriesCell extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
@@ -187,6 +192,11 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         miniItemsClickArea.setDelegate(() -> {
            onMiniListClicked();
         });
+        if (BuildVars.DEBUG_VERSION) {
+            miniItemsClickArea.setLongPress(() -> {
+                showDebugAnimationDialog();
+            });
+        }
         recyclerListView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -814,7 +824,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     }
 
     boolean collapsed;
-    float K = 0.3f;
+    float K = 0.45f;
     ValueAnimator valueAnimator;
     public OvershootInterpolator interpolator = new OvershootInterpolator(4);
 
@@ -850,13 +860,19 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     checkCollapsedProgres();
                 });
                 valueAnimator.addListener(new AnimatorListenerAdapter() {
+
+                    @Override
+                    public void onAnimationStart(Animator animation) {
+                        super.onAnimationStart(animation);
+                        try {
+                            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+                        } catch (Exception ignored) {}
+                    }
+
                     @Override
                     public void onAnimationEnd(Animator animation) {
                         collapsedProgress2 = newCollapsed ? 1f : 0;
                         checkCollapsedProgres();
-                        try {
-                            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                        } catch (Exception ignored) {}
                     }
                 });
                 valueAnimator.setDuration(450);
@@ -957,7 +973,88 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     }
 
     public void onUserLongPressed(View view, long dialogId) {
+    }
 
+    private void showDebugAnimationDialog() {
+        Context context = getContext();
+        if (context == null) {
+            return;
+        }
+
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(4), AndroidUtilities.dp(24), AndroidUtilities.dp(4));
+
+        TextView titleTextView = new TextView(context);
+        titleTextView.setText("Overshoot Tension");
+        titleTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        titleTextView.setTextSize(16);
+        container.addView(titleTextView);
+
+        TextView valueTextView = new TextView(context);
+        valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteValueText));
+        valueTextView.setTextSize(14);
+        container.addView(valueTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+
+        SeekBarView seekBarView = new SeekBarView(context);
+        seekBarView.setReportChanges(true);
+        
+        float min = 0.0f;
+        float max = 6.0f;
+        float currentValue = 4.0f;
+        
+        seekBarView.setProgress((currentValue - min) / (max - min));
+        
+        seekBarView.setDelegate(new SeekBarView.SeekBarViewDelegate() {
+            @Override
+            public void onSeekBarDrag(boolean stop, float progress) {
+                float value = min + (max - min) * progress;
+                valueTextView.setText(String.format(Locale.US, "%.2f", value));
+            }
+
+            @Override
+            public void onSeekBarPressed(boolean pressed) {}
+
+            @Override
+            public CharSequence getContentDescription() {
+                float value = min + (max - min) * seekBarView.getProgress();
+                return String.valueOf(value);
+            }
+        });
+
+        valueTextView.setText(String.format(Locale.US, "%.2f", currentValue));
+        
+        container.addView(seekBarView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 38, 0, 0, 0, 8));
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Debug: Animation Settings");
+        builder.setView(container);
+
+        builder.setPositiveButton("OK", (dialog, which) -> {
+            float newValue = min + (max - min) * seekBarView.getProgress();
+            setInterpolatorTension(newValue);
+            dialog.dismiss();
+        });
+
+        builder.setNeutralButton("Reset", (dialog, which) -> {
+            setInterpolatorTension(4.0f);
+            dialog.dismiss();
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            dialog.dismiss();
+        });
+
+        AlertDialog dialog = builder.create();
+        if (fragment != null) {
+            fragment.showDialog(dialog);
+        } else {
+            dialog.show();
+        }
+    }
+
+    private void setInterpolatorTension(float tension) {
+        interpolator = new OvershootInterpolator(tension);
     }
 
     public void openStoryRecorder() {
