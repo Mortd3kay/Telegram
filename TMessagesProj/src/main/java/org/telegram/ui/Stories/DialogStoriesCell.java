@@ -123,6 +123,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     float collapsedProgress = -1;
 
     int currentState = -1;
+    int prevState = -1;
 
     ArrayList<StoryCell> viewsDrawInParent = new ArrayList<>();
     ArrayList<Long> animateToDialogIds = new ArrayList<>();
@@ -651,13 +652,14 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                         toX = AndroidUtilities.dp(COLLAPSED_DIS) * 2;
                     }
                     toX += AndroidUtilities.dp(68);
-                    
-                    float maxYOffset = AndroidUtilities.dp(10);
+
+                    boolean isCollapsing = isSwipingToCollapse();
+                    float maxYOffset = AndroidUtilities.dp(isCollapsing ? -10f : 10f);
                     float amplitudeMultiplier = getAmplitudeMultiplier(adapterPosition, animateFromPosition);
                     float sineAnimation = -(float) Math.sin(collapsedProgress * Math.PI);
 
                     cell.setTranslationX(AndroidUtilities.lerp(0, toX - cell.getLeft(), CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(collapsedProgress)));
-                    cell.setTranslationY(sineAnimation * maxYOffset * amplitudeMultiplier * collapsedProgress * (1f - collapsedProgress) * 4f);
+                    cell.setTranslationY(sineAnimation * maxYOffset * amplitudeMultiplier * collapsedProgress1 * (1f - collapsedProgress1) * 4f);
                     
                     if (drawInParent) {
                         viewsDrawInParent.add(cell);
@@ -765,6 +767,10 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         } else {
             amplitudeMultiplier = 0;
         }
+        boolean isCollapsing = isSwipingToCollapse();
+        if (isCollapsing) {
+            amplitudeMultiplier = 1f - amplitudeMultiplier;
+        }
         return amplitudeMultiplier;
     }
 
@@ -810,7 +816,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     boolean collapsed;
     float K = 0.3f;
     ValueAnimator valueAnimator;
-    public OvershootInterpolator interpolator = new OvershootInterpolator();
+    public OvershootInterpolator interpolator = new OvershootInterpolator(4);
 
     public void setProgressToCollapse(float progress) {
         setProgressToCollapse(progress, true);
@@ -1772,7 +1778,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         if (this.currentState == state) {
             return;
         }
-        int prevState = this.currentState;
+        this.prevState = this.currentState;
         this.currentState = state;
         if (currentState != TRANSITION_STATE && updateOnIdleState) {
             AndroidUtilities.runOnUIThread(() -> {
@@ -1811,6 +1817,20 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             }
         }
         invalidate();
+    }
+
+    public boolean isSwipingToCollapse() {
+        if (currentState == TRANSITION_STATE) {
+            if (prevState == EXPANDED_STATE) {
+                return true;
+            } else if (prevState == COLLAPSED_STATE) {
+                return false;
+            }
+        }
+        if (collapsed) {
+            return true;
+        }
+        return false;
     }
 
     static float getAvatarRight(int width, float progressToCollapsed) {
