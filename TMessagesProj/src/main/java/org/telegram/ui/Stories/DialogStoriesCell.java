@@ -153,6 +153,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     private StoryCell overscrollSelectedView;
     private ActionBar actionBar;
     private StoriesUtilities.EnsureStoryFileLoadedObject globalCancelable;
+    private boolean isAnimationOverscroll;
 
     public DialogStoriesCell(@NonNull Context context, BaseFragment fragment, int currentAccount, int type) {
         super(context);
@@ -675,25 +676,31 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                         viewsDrawInParent.add(cell);
                     }
                 } else if (recyclerListView.getItemAnimator() == null || !recyclerListView.getItemAnimator().isRunning()) {
+                    float cellTranslationX = 0;
+                    float cellTranslationY = 0;
+                    
                     if (overscrollPrgoress > 0) {
                         if (cell.position < overscrollSelectedPosition) {
-                            cell.setTranslationX(-overScrollOffset);
-                            cell.setTranslationY(0);
+                            cellTranslationX = -overScrollOffset;
                             cell.setAlpha(overscrollAlpha);
                         } else if (cell.position > overscrollSelectedPosition) {
-                            cell.setTranslationX(overScrollOffset);
-                            cell.setTranslationY(0);
+                            cellTranslationX = overScrollOffset;
                             cell.setAlpha(overscrollAlpha);
                         } else {
-                            cell.setTranslationX(0);
-                            cell.setTranslationY(-overScrollOffset / 2f);
+                            cellTranslationX = 0;
+                            cellTranslationY = -overScrollOffset / 2f;
                             cell.setAlpha(1f);
                         }
+                        
+                        int distanceFromSelected = Math.abs(cell.position - overscrollSelectedPosition);
+                        float paddingMultiplier = overscrollPrgoress * cell.position * AndroidUtilities.dp(4);
+                        cellTranslationX += distanceFromSelected * paddingMultiplier;
                     } else {
-                        cell.setTranslationX(0);
-                        cell.setTranslationY(0);
                         cell.setAlpha(1f);
                     }
+                    
+                    cell.setTranslationX(cellTranslationX);
+                    cell.setTranslationY(cellTranslationY);
                 }
                 if (cell.drawInParent) {
                     float right = recyclerListView.getX() + cell.getX() + cell.getMeasuredWidth() / 2f + AndroidUtilities.dp(ITEM_WIDTH) / 2f;
@@ -857,6 +864,11 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             if (valueAnimator != null) {
                 valueAnimator.addUpdateListener(animation -> {
                     collapsedProgress2 = (float) animation.getAnimatedValue();
+                    
+                    float overshoot = newCollapsed ? Math.max(0, collapsedProgress2 - 1f) : Math.max(0, -collapsedProgress2);
+                    isAnimationOverscroll = overshoot > 0;
+                    overscrollPrgoress = overshoot;
+                    
                     checkCollapsedProgres();
                 });
                 valueAnimator.addListener(new AnimatorListenerAdapter() {
@@ -872,6 +884,9 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     @Override
                     public void onAnimationEnd(Animator animation) {
                         collapsedProgress2 = newCollapsed ? 1f : 0;
+                        isAnimationOverscroll = false;
+                        overscrollPrgoress = 0;
+                        
                         checkCollapsedProgres();
                     }
                 });
@@ -1000,7 +1015,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         seekBarView.setReportChanges(true);
         
         float min = 0.0f;
-        float max = 6.0f;
+        float max = 5.0f;
         float currentValue = 4.0f;
         
         seekBarView.setProgress((currentValue - min) / (max - min));
@@ -1163,9 +1178,14 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     }
 
     public void setOverscoll(float storiesOverscroll) {
+        if (isAnimationOverscroll) {
+            return;
+        }
+        
         overscrollPrgoress = storiesOverscroll / AndroidUtilities.dp(90);
         invalidate();
         recyclerListView.invalidate();
+        
         if (overscrollPrgoress != 0) {
             setClipChildren(false);
             recyclerListView.setClipChildren(false);

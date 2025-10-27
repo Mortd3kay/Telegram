@@ -5475,7 +5475,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             if (scrollY != 0 && scrollY != actionBarHeight) {
                 if (scrollY < actionBarHeight * K) {
                     if (viewPage.listView.canScrollVertically(-1)) {
-                        viewPage.scroller.smoothScrollBy(-scrollY, 450, dialogStoriesCell.interpolator);
+                        viewPage.scroller.smoothScrollBy(-scrollY);
                         return true;
                     }
                 } else if (viewPage.listView.canScrollVertically(1)) {
