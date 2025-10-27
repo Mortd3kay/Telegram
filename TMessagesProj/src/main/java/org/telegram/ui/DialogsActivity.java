@@ -4149,15 +4149,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         float newOverScroll = storiesOverscroll - dy * AndroidUtilities.lerp(0.2f, 0.5f, dialogStoriesCell.overscrollProgress());
                         setStoriesOvercroll(viewPage, newOverScroll);
                     }
-
-                    if (!isDragging && viewPage.scroller.isRunning() && !rightSlidingDialogContainer.hasFragment() && hasStories && progressToActionMode == 0) {
-                        int excess = dy - scrolled;
-                        if (excess < 0) {
-                            float newOverScroll = storiesOverscroll + Math.abs(excess);
-                            setStoriesOvercroll(viewPage, newOverScroll);
-                        }
-                    }
-
                     return scrolled;
                 }
 

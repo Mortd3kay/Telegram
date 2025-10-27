@@ -691,10 +691,12 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                             cellTranslationY = -overScrollOffset / 2f;
                             cell.setAlpha(1f);
                         }
-                        
-                        int distanceFromSelected = Math.abs(cell.position - overscrollSelectedPosition);
-                        float paddingMultiplier = overscrollPrgoress * cell.position * AndroidUtilities.dp(4);
-                        cellTranslationX += distanceFromSelected * paddingMultiplier;
+
+                        if (isAnimationOverscroll) {
+                            int distanceFromSelected = Math.abs(cell.position - overscrollSelectedPosition);
+                            float paddingMultiplier = overscrollPrgoress * cell.position * AndroidUtilities.dp(4);
+                            cellTranslationX += distanceFromSelected * paddingMultiplier;
+                        }
                     } else {
                         cell.setAlpha(1f);
                     }
@@ -1520,7 +1522,11 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             params.drawSegments = true;
             if (!params.forceAnimateProgressToSegments) {
                 params.progressToSegments = 1f - Utilities.clamp(collapsedProgress2, 1f, 0f);
-                params.segmentRotationOffset = AndroidUtilities.lerp(-40f, 0f, 1f - collapsedProgress2);
+            }
+            if (overscrollProgress > 0) {
+                params.segmentRotationOffset = AndroidUtilities.lerp(0f, 40f, overscrollProgress);
+            } else {
+                params.segmentRotationOffset = AndroidUtilities.lerp(0f, -40f, collapsedProgress2);
             }
             params.originalAvatarRect.set(x, y, x + finalSize, y + finalSize);
             avatarImage.setAlpha(1f);
@@ -1831,6 +1837,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                 this.selectedForOverscroll = selectedForOverscroll;
                 this.progressToCollapsed = progressToCollapsed;
                 this.progressToCollapsed2 = progressToCollapsed2;
+                this.overscrollProgress = overscrollProgress;
                 float progressHalf = Utilities.clamp(progressToCollapsed / 0.5f, 1f, 0f);
                 float size = AndroidUtilities.dp(48);
                 float collapsedSize = AndroidUtilities.dp(COLLAPSED_SIZE);
