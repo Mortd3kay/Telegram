@@ -155,6 +155,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     private StoryCell overscrollSelectedView;
     private StoriesUtilities.EnsureStoryFileLoadedObject globalCancelable;
     private float menuItemsOffset;
+    private float lastViewRight;
 
     public DialogStoriesCell(@NonNull Context context, BaseFragment fragment, int currentAccount, int type) {
         super(context);
@@ -638,7 +639,8 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         } else if (currentState == COLLAPSED_STATE) {
             animateFromPosition = 0;
         }
-        float lastViewRight = 0;
+
+        lastViewRight = 0;
         if (currentState >= 0 && currentState != COLLAPSED_STATE) {
             if (animateFromPosition == -1) {
                 crossfade = true;
@@ -824,19 +826,19 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     cell.setTranslationY(translationY);
                 }
                 if (cell.drawInParent) {
-                    float right = recyclerListView.getX() + cell.getX() + cell.getMeasuredWidth() / 2f + dp(ITEM_WIDTH) / 2f;
+                    float right = recyclerListView.getX() + cell.getX() + cell.avatarImage.getImageWidth() / 2f;
                     if (lastViewRight == 0 || right > lastViewRight) {
                         lastViewRight = right;
                     }
                 }
             }
-        } else {
-            for (int i = 0; i < listViewMini.getChildCount(); i++) {
-                StoryCell cell = (StoryCell) listViewMini.getChildAt(i);
-                float right = (listViewMini.getX() /*+ dp(50)*/) + cell.getX() + cell.getMeasuredWidth();
-                if (lastViewRight == 0 || right > lastViewRight) {
-                    lastViewRight = right;
-                }
+        }
+
+        for (int i = 0; i < listViewMini.getChildCount(); i++) {
+            StoryCell cell = (StoryCell) listViewMini.getChildAt(i);
+            float right = (listViewMini.getX() /*+ dp(50)*/) + cell.getX() + cell.avatarImage.getImageWidth() /2f;
+            if (lastViewRight == 0 || right > lastViewRight) {
+                lastViewRight = right;
             }
         }
 
@@ -964,14 +966,14 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                 animators.add(valueAnimator);
                 animators.add(yStoriesAnimator);
                 if (collapsed) {
-                    storiesAnimatorSet.setDuration(1000);
+                    storiesAnimatorSet.setDuration(700);
                     collapsedOvershootAnimator = ValueAnimator.ofFloat(collapsedProgress2, newCollapsed ? 1f : 0);
                     collapsedOvershootAnimator.addUpdateListener(animation -> {
                         collapsedOvershootProgress = (float) animation.getAnimatedValue();
                     });
                     storiesCollapseInterpolator = new OvershootInterpolator(collapsedSpringCoef);
                     collapsedOvershootAnimator.setInterpolator(storiesCollapseInterpolator);
-                    collapsedOvershootAnimator.setDuration(750);
+                    collapsedOvershootAnimator.setDuration(500);
                     animators.add(collapsedOvershootAnimator);
                 } else {
                     expandOvershootAnimator = ValueAnimator.ofFloat(collapsedProgress2, newCollapsed ? 1f : 0f);
@@ -1011,6 +1013,10 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
 
     public float getCollapsedProgress() {
         return collapsedProgress;
+    }
+
+    public float getLastViewRight() {
+        return lastViewRight;
     }
 
     public void scrollToFirstCell() {

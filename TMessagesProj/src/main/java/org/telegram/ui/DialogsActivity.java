@@ -539,6 +539,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     private AnimatorSet searchAnimator;
     private Animator tabsAlphaAnimator;
+    private ValueAnimator logoAnimator;
+    private boolean logoCollapsed = true;
+    private float logoAnimatedTranslationX = 0f;
     private float searchAnimationProgress;
     private boolean searchAnimationTabsDelayedCrossfade;
 
@@ -1148,6 +1151,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             updateContextViewPosition();
             updateStoriesViewAlpha(storiesAlpha);
+            updateLogoPosition();
             super.dispatchDraw(canvas);
             if (whiteActionBar && searchAnimationProgress > 0 && searchAnimationProgress < 1f && searchTabsView != null) {
                 windowBackgroundPaint.setColor(getThemedColor(Theme.key_windowBackgroundWhite));
@@ -1761,27 +1765,19 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private void updateStoriesViewAlpha(float alpha) {
         final float factorSearch = Utilities.clamp(searchAnimationProgress * 2, 1f, 0f);
         dialogStoriesCell.setAlpha((1f - progressToActionMode) * alpha * progressToDialogStoriesCell * (1f - factorSearch));
-        float containersAlpha;
 
         if (hasStories || animateToHasStories) {
             float p = Utilities.clamp(-scrollYOffset / dp(DialogStoriesCell.HEIGHT_IN_DP), 1f, 0f);
             if (progressToActionMode == 1f) {
                 p = 1f;
             }
-            float pHalf = Utilities.clamp(p / 0.5f, 1f, 0f);
             dialogStoriesCell.setClipTop(0);
             if (!hasStories && animateToHasStories) {
                 dialogStoriesCell.setTranslationY(-dp(DialogStoriesCell.HEIGHT_IN_DP) - dp(8));
                 dialogStoriesCell.setProgressToCollapse(1f);
-                containersAlpha = 1f - progressToDialogStoriesCell;
             } else {
                 dialogStoriesCell.setTranslationY(Math.max(scrollYOffset, -getMaxScrollYOffsetWithoutSearch()) + storiesYOffset + storiesOverscroll / 2f - dp(8));
                 dialogStoriesCell.setProgressToCollapse(p, !rightSlidingDialogContainer.hasFragment());
-                if (!animateToHasStories) {
-                    containersAlpha = 1f - progressToDialogStoriesCell;
-                } else {
-                    containersAlpha = (1f - pHalf);
-                }
             }
             actionBar.setTranslationY(0);
         } else {
@@ -1790,7 +1786,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 dialogStoriesCell.setProgressToCollapse(1f);
                 dialogStoriesCell.setClipTop((int) (AndroidUtilities.statusBarHeight - dialogStoriesCell.getY()));
             }
-            containersAlpha = 1f - progressToDialogStoriesCell;
 
             if (ALLOW_SCROLL_SEARCH) {
                 actionBar.setTranslationY(0);
@@ -1800,7 +1795,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 actionBar.setTranslationY(scrollYOffset);
             }
         }
-        containersAlpha *= (1f - factorSearch);
+        float containersAlpha = (1f - factorSearch);
         if (containersAlpha != 1f) {
             actionBar.getTitlesContainer().setPivotY(AndroidUtilities.statusBarHeight);
             actionBar.getTitlesContainer().setPivotX(dp(72));
@@ -1822,6 +1817,74 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             actionBar.getTitleOverlayContainer().setScaleX(1f);
             actionBar.getTitleOverlayContainer().setAlpha(1f - progressToActionMode);
         }
+    }
+
+    private void updateLogoPosition() {
+        if (dialogStoriesCell == null) return;
+        
+        float p = Utilities.clamp(-scrollYOffset / dp(DialogStoriesCell.HEIGHT_IN_DP), 1f, 0f);
+        if (progressToActionMode == 1f) {
+            p = 1f;
+        }
+        
+        boolean newCollapsed = p > dialogStoriesCell.K;
+
+        System.out.println("progress " + p);
+        
+        if (newCollapsed != logoCollapsed) {
+            logoCollapsed = newCollapsed;
+            if (logoAnimator != null) {
+                logoAnimator.cancel();
+            }
+            
+            float fromX = logoAnimatedTranslationX;
+            float toX;
+            
+            if (newCollapsed) {
+                float storiesRightEdge = dialogStoriesCell.getLastViewRight();
+                toX = storiesRightEdge + dp(4);
+            } else {
+                toX = 0;
+            }
+            
+            logoAnimator = ValueAnimator.ofFloat(fromX, toX);
+            logoAnimator.addUpdateListener(animation -> {
+                float value = (float) animation.getAnimatedValue();
+                if (newCollapsed) {
+                    logoAnimatedTranslationX = value;
+                } else {
+                    logoAnimatedTranslationX = Math.max(value, -scrollYOffset);
+                }
+
+                actionBar.getTitlesContainer().setTranslationX(logoAnimatedTranslationX);
+                actionBar.getTitleOverlayContainer().setTranslationX(logoAnimatedTranslationX);
+            });
+            logoAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    logoAnimator = null;
+                }
+            });
+            logoAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            logoAnimator.setDuration(350);
+            logoAnimator.start();
+        }
+
+        if (logoAnimator == null || !logoAnimator.isRunning()) {
+            if (p == 0f) {
+                logoAnimatedTranslationX = 0f;
+            } else if (p > dialogStoriesCell.K) {
+                float storiesRightEdge = dialogStoriesCell.getLastViewRight();
+                logoAnimatedTranslationX = storiesRightEdge + dp(4);
+            } else {
+                logoAnimatedTranslationX = -scrollYOffset;
+
+            }
+            actionBar.getTitlesContainer().setTranslationX(logoAnimatedTranslationX);
+            actionBar.getTitleOverlayContainer().setTranslationX(logoAnimatedTranslationX);
+        }
+        
+
     }
 
     public static float viewOffset = 0.0f;
