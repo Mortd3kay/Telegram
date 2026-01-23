@@ -1829,8 +1829,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         
         boolean newCollapsed = p > dialogStoriesCell.K;
 
-        System.out.println("progress " + p);
-        
         if (newCollapsed != logoCollapsed) {
             logoCollapsed = newCollapsed;
             if (logoAnimator != null) {
@@ -1838,24 +1836,20 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             
             float fromX = logoAnimatedTranslationX;
-            float toX;
             
-            if (newCollapsed) {
-                float storiesRightEdge = dialogStoriesCell.getLastViewRight();
-                toX = storiesRightEdge + dp(4);
-            } else {
-                toX = 0;
-            }
-            
-            logoAnimator = ValueAnimator.ofFloat(fromX, toX);
+            logoAnimator = ValueAnimator.ofFloat(0f, 1f);
             logoAnimator.addUpdateListener(animation -> {
-                float value = (float) animation.getAnimatedValue();
+                float progress = (float) animation.getAnimatedValue();
+                float currentTarget;
+                
                 if (newCollapsed) {
-                    logoAnimatedTranslationX = value;
+                    float storiesRightEdge = dialogStoriesCell.getLastViewRight();
+                    currentTarget = storiesRightEdge + dp(4);
                 } else {
-                    logoAnimatedTranslationX = Math.max(value, -scrollYOffset);
+                    currentTarget = -scrollYOffset;
                 }
-
+                
+                logoAnimatedTranslationX = AndroidUtilities.lerp(fromX, currentTarget, progress);
                 actionBar.getTitlesContainer().setTranslationX(logoAnimatedTranslationX);
                 actionBar.getTitleOverlayContainer().setTranslationX(logoAnimatedTranslationX);
             });
@@ -1866,7 +1860,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             });
             logoAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
-            logoAnimator.setDuration(350);
+            logoAnimator.setDuration(500);
             logoAnimator.start();
         }
 

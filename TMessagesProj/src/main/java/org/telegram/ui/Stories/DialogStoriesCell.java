@@ -134,6 +134,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     float collapsedProgress = -1;
 
     int currentState = -1;
+    int prevState = -1;
 
     ArrayList<StoryCell> viewsDrawInParent = new ArrayList<>();
     ArrayList<Long> animateToDialogIds = new ArrayList<>();
@@ -939,6 +940,16 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     checkCollapsedProgress();
                 });
 
+                valueAnimator.addListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationStart(Animator animation) {
+                        super.onAnimationStart(animation);
+                        try {
+                            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+                        } catch (Exception ignored) {}
+                    }
+                });
+
                 valueAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
                 yStoriesAnimator = ValueAnimator.ofFloat(collapsedProgress1, newCollapsed ? collapsedProgress1 : 0);
                 yStoriesAnimator.addUpdateListener(animation -> {
@@ -1491,7 +1502,12 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
 
             params.drawSegments = true;
             if (!params.forceAnimateProgressToSegments) {
-                params.progressToSegments = 1f - collapsedProgress2;
+                params.progressToSegments = 1f - Utilities.clamp(collapsedProgress1, 1f, 0f);
+            }
+            if (overscrollProgress > 0) {
+                params.segmentRotationOffset = AndroidUtilities.lerp(0f, 40f, overscrollProgress);
+            } else {
+                params.segmentRotationOffset = AndroidUtilities.lerp(0f, -80f, collapsedProgress1);
             }
             params.originalAvatarRect.set(x, y, x + finalSize, y + finalSize);
             params.additionalInset = dpf2(1.33f) * progressToCollapsed;
@@ -1781,13 +1797,12 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         }
 
         public void setProgressToCollapsed(float progressToCollapsed, float progressToCollapsed2, float overscrollProgress, boolean selectedForOverscroll) {
-            if (this.progressToCollapsed != progressToCollapsed || this.progressToCollapsed2 != progressToCollapsed2 || this.overscrollProgress != overscrollProgress || this.selectedForOverscroll != selectedForOverscroll) {
                 this.selectedForOverscroll = selectedForOverscroll;
                 this.progressToCollapsed = progressToCollapsed;
                 this.progressToCollapsed2 = progressToCollapsed2;
+                this.overscrollProgress = overscrollProgress;
                 invalidate();
                 recyclerListView.invalidate();
-            }
             textAlphaTransition = mini ? 0 : 1f - Utilities.clamp(collapsedProgress / K, 1f, 0);
             textViewContainer.setAlpha(textAlphaTransition * textAlpha);
         }
@@ -1846,7 +1861,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         if (this.currentState == state) {
             return;
         }
-        int prevState = this.currentState;
+        this.prevState = this.currentState;
         this.currentState = state;
         if (currentState != TRANSITION_STATE && updateOnIdleState) {
             AndroidUtilities.runOnUIThread(() -> updateItems(true, false));
