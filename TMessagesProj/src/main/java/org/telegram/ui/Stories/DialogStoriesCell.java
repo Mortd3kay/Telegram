@@ -651,7 +651,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                 }
             }
 
-            recyclerListView.setAlpha(1f - Utilities.clamp(collapsedProgress / K, 1f, 0));
+            recyclerListView.setAlpha(1f - Utilities.clamp(collapsedProgress / TRANSITION_K, 1f, 0));
             overscrollSelectedPosition = -1;
             if (overscrollProgress != 0) {
                 int minPosition = -1;
@@ -901,6 +901,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
 
     boolean collapsed;
     public float K = 0.3f;
+    private float TRANSITION_K = 0.1f;
     private ValueAnimator valueAnimator;
     private ValueAnimator collapsedOvershootAnimator;
     private float collapsedOvershootProgress = 1f;
@@ -1648,16 +1649,12 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
             }
             textViewContainer.setTranslationY(y + finalSize + dp(7) * (1f - progressToCollapsed));
             textViewContainer.setTranslationX(x - fromX);
+            textAlphaTransition = mini ? 0 : 1f - Utilities.clamp(collapsedProgress / TRANSITION_K, 1f, 0);
+
             if (!mini) {
-                float p;
                 if (isSelf) {
                     textAlpha = 1f;
                 } else {
-                    if (params.progressToSate != 1f) {
-                        p = params.currentState == StoriesUtilities.STATE_READ ? params.progressToSate : (1f - params.progressToSate);
-                    } else {
-                        p = params.currentState == StoriesUtilities.STATE_READ ? 1f : 0f;
-                    }
                     textAlpha = params.globalState == StoriesUtilities.STATE_READ ? 0.7f : 1f;//AndroidUtilities.lerp(1f, 0.7f, p);
                 }
                 textViewContainer.setAlpha(textAlphaTransition * textAlpha);
@@ -1797,14 +1794,12 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
         }
 
         public void setProgressToCollapsed(float progressToCollapsed, float progressToCollapsed2, float overscrollProgress, boolean selectedForOverscroll) {
-                this.selectedForOverscroll = selectedForOverscroll;
-                this.progressToCollapsed = progressToCollapsed;
-                this.progressToCollapsed2 = progressToCollapsed2;
-                this.overscrollProgress = overscrollProgress;
-                invalidate();
-                recyclerListView.invalidate();
-            textAlphaTransition = mini ? 0 : 1f - Utilities.clamp(collapsedProgress / K, 1f, 0);
-            textViewContainer.setAlpha(textAlphaTransition * textAlpha);
+            this.selectedForOverscroll = selectedForOverscroll;
+            this.progressToCollapsed = progressToCollapsed;
+            this.progressToCollapsed2 = progressToCollapsed2;
+            this.overscrollProgress = overscrollProgress;
+            invalidate();
+            recyclerListView.invalidate();
         }
 
         public void setCrossfadeTo(long dialogId) {
