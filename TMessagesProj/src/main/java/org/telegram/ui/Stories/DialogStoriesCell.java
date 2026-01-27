@@ -18,9 +18,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.text.Layout;
 import android.text.Spannable;
-import android.text.SpannableStringBuilder;
 import android.text.Spanned;
-import android.text.TextUtils;
 import android.text.style.ClickableSpan;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
@@ -145,8 +143,6 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     private float collapsedProgress1 = -1;
     private float collapsedProgress2;
     BaseFragment fragment;
-    private CharSequence currentTitle;
-    private SpannableStringBuilder uploadingString;
     private ValueAnimator textAnimator;
     private Runnable animationRunnable;
     public boolean allowGlobalUpdates = true;
@@ -510,7 +506,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
     }
 
     private float overScrollCoef = 1f;
-    private float collapsedSpringCoef = 0.95f;
+    private float collapsedSpringCoef = 0.5f;
     private float expandedSpringCoef = 0.9f;
 
     public float getOverScrollCoef() {
@@ -538,41 +534,6 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                 items.add(new Item(dialogId));
             }
         }
-        int size = items.size();
-        if (!storiesController.hasSelfStories()) {
-            size--;
-        }
-        int totalCount;
-        boolean hidden = type == TYPE_ARCHIVE;
-        totalCount = Math.max(1, Math.max(storiesController.getTotalStoriesCount(hidden), size));
-
-        currentTitle = null;
-        if (storiesController.hasOnlySelfStories()) {
-            if (storiesController.hasUploadingStories(UserConfig.getInstance(currentAccount).getClientUserId())) {
-                String str = LocaleController.getString(R.string.UploadingStory);
-                int index = str.indexOf("…");
-                if (index > 0) {
-                    if (uploadingString == null) {
-                        SpannableStringBuilder spannableStringBuilder = SpannableStringBuilder.valueOf(str);
-                        UploadingDotsSpannable dotsSpannable = new UploadingDotsSpannable();
-                        spannableStringBuilder.setSpan(dotsSpannable, spannableStringBuilder.length() - 1, spannableStringBuilder.length(), 0);
-//                        dotsSpannable.setParent(titleView, true);
-                        uploadingString = spannableStringBuilder;
-                    }
-                    currentTitle = uploadingString;
-                } else {
-                    currentTitle = str;
-                }
-            } else {
-                currentTitle = menuItemsOffset < dp(50) ? null :
-                    LocaleController.getString(R.string.MyStory);
-            }
-        } else {
-            currentTitle = menuItemsOffset < dp(50) ? null :
-                LocaleController.formatPluralString("Stories", totalCount);
-        }
-
-        animatorHasTitleText.setValue(!TextUtils.isEmpty(currentTitle), animated);
 
         miniItems.clear();
         for (int i = 0; i < items.size(); i++) {
@@ -690,6 +651,10 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                 if (adapterPosition < animateFromPosition) {
                     cellCollapsedProgress = (float) Math.pow(collapsedProgress, 0.25f);
                 }
+                
+                cell.isFirst = collapsedProgress > 0 && adapterPosition == animateFromPosition;
+                cell.isLast = collapsedProgress > 0 && adapterPosition == animateFromPosition + animateToDialogIds.size() - 1;
+                
                 cell.setProgressToCollapsed(cellCollapsedProgress, collapsedProgress2, overscrollProgress, overscrollSelectedPosition == cell.position);
                 if (adapterPosition > animateFromPosition && adapterPosition < animateFromPosition + animateToDialogIds.size()) {
                     StoryCell previousCell = (StoryCell) recyclerListView.getChildAt(i - 1);
@@ -765,7 +730,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     }
                     translationX = AndroidUtilities.lerp(toX - cell.getLeft(), dstCellX,1 - expandOvershootAnimatorProgress);
                 } else {
-                    translationX = AndroidUtilities.lerp(0, toX - cell.getLeft(), storiesCollapseInterpolator.getInterpolation(collapsedOvershootProgress));
+                    translationX = AndroidUtilities.lerp(0, toX - cell.getLeft(), collapsedOvershootProgress);
                 }
 
                 final float collapsedFactor = MathUtils.clamp((collapsedProgress1 - 0.2f) / 0.1f, 0, 1);
@@ -803,8 +768,6 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                         cell.setCrossfadeTo(-1);
                     }
                     cell.drawInParent = drawInParent;
-                    cell.isFirst = adapterPosition == animateFromPosition;
-                    cell.isLast = adapterPosition >= animateFromPosition + animateToDialogIds.size() - 1;
                     cell.setTranslationX(translationX);
                     cell.setTranslationY(translationY);
 
@@ -827,7 +790,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     cell.setTranslationY(translationY);
                 }
                 if (cell.drawInParent) {
-                    float right = recyclerListView.getX() + cell.getX() + cell.avatarImage.getImageWidth() / 2f;
+                    float right = recyclerListView.getX() + cell.getX() + cell.avatarImage.getImageWidth() / 2f - menuItemsOffset;
                     if (lastViewRight == 0 || right > lastViewRight) {
                         lastViewRight = right;
                     }
@@ -837,7 +800,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
 
         for (int i = 0; i < listViewMini.getChildCount(); i++) {
             StoryCell cell = (StoryCell) listViewMini.getChildAt(i);
-            float right = (listViewMini.getX() /*+ dp(50)*/) + cell.getX() + cell.avatarImage.getImageWidth() /2f;
+            float right = (listViewMini.getX() /*+ dp(50)*/) + cell.getX() + cell.avatarImage.getImageWidth() /2f - menuItemsOffset;
             if (lastViewRight == 0 || right > lastViewRight) {
                 lastViewRight = right;
             }
@@ -901,7 +864,7 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
 
     boolean collapsed;
     public float K = 0.3f;
-    private float TRANSITION_K = 0.1f;
+    private final float TRANSITION_K = 0.1f;
     private ValueAnimator valueAnimator;
     private ValueAnimator collapsedOvershootAnimator;
     private float collapsedOvershootProgress = 1f;
@@ -978,14 +941,14 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                 animators.add(valueAnimator);
                 animators.add(yStoriesAnimator);
                 if (collapsed) {
-                    storiesAnimatorSet.setDuration(700);
+                    storiesAnimatorSet.setDuration(350);
                     collapsedOvershootAnimator = ValueAnimator.ofFloat(collapsedProgress2, newCollapsed ? 1f : 0);
                     collapsedOvershootAnimator.addUpdateListener(animation -> {
                         collapsedOvershootProgress = (float) animation.getAnimatedValue();
                     });
                     storiesCollapseInterpolator = new OvershootInterpolator(collapsedSpringCoef);
                     collapsedOvershootAnimator.setInterpolator(storiesCollapseInterpolator);
-                    collapsedOvershootAnimator.setDuration(500);
+                    collapsedOvershootAnimator.setDuration(350);
                     animators.add(collapsedOvershootAnimator);
                 } else {
                     expandOvershootAnimator = ValueAnimator.ofFloat(collapsedProgress2, newCollapsed ? 1f : 0f);
@@ -1608,6 +1571,15 @@ public class DialogStoriesCell extends FrameLayout implements NotificationCenter
                     params.isLast = isLast;
                     params.isFirst = isFirst;
                     params.alpha = 1f - failT;
+
+                    if (isLast) {
+                        params.rightTopAngleToExclude = 0;
+                        params.rightBottomAngleToExclude = 0;
+                    }
+                    if (isFirst) {
+                        params.leftBottomAngleToExclude = 0;
+                        params.leftTopAngleToExclude = 0;
+                    }
 
                     if (!isSelf && crossfadeToDialog) {
                         params.crossfadeToDialog = crossfadeToDialogId;

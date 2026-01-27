@@ -200,6 +200,7 @@ import org.telegram.ui.Stars.StarGiftSheet;
 import org.telegram.ui.Stars.StarsController;
 import org.telegram.ui.Stars.StarsIntroActivity;
 import org.telegram.ui.Stories.StealthModeAlert;
+import org.telegram.ui.Stories.UploadingDotsSpannable;
 import org.telegram.ui.bots.BotWebViewSheet;
 import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
@@ -598,6 +599,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private boolean canSelectTopics;
     private String searchString;
     private String initialSearchString;
+    private SpannableStringBuilder uploadingString;
     private MessagesStorage.TopicKey openedDialogId = new MessagesStorage.TopicKey();
     private boolean cantSendToChannels;
     private boolean allowSwitchAccount;
@@ -1820,7 +1822,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void updateLogoPosition() {
-        if (dialogStoriesCell == null) return;
+        if (dialogStoriesCell == null || !dialogStoriesCellVisible || !hasStories) return;
         
         float p = Utilities.clamp(-scrollYOffset / dp(DialogStoriesCell.HEIGHT_IN_DP), 1f, 0f);
         if (progressToActionMode == 1f) {
@@ -1839,12 +1841,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             
             logoAnimator = ValueAnimator.ofFloat(0f, 1f);
             logoAnimator.addUpdateListener(animation -> {
-                float progress = (float) animation.getAnimatedValue();
+                float realProgress = Utilities.clamp(-scrollYOffset / dp(DialogStoriesCell.HEIGHT_IN_DP), 1f, 0f);
+                float progress = Math.max((float) animation.getAnimatedValue(), realProgress);
                 float currentTarget;
                 
                 if (newCollapsed) {
                     float storiesRightEdge = dialogStoriesCell.getLastViewRight();
-                    currentTarget = storiesRightEdge + dp(4);
+                    currentTarget = storiesRightEdge + dp(20);
                 } else {
                     currentTarget = -scrollYOffset;
                 }
@@ -1869,7 +1872,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 logoAnimatedTranslationX = 0f;
             } else if (p > dialogStoriesCell.K) {
                 float storiesRightEdge = dialogStoriesCell.getLastViewRight();
-                logoAnimatedTranslationX = storiesRightEdge + dp(4);
+                logoAnimatedTranslationX = storiesRightEdge + dp(20);
             } else {
                 logoAnimatedTranslationX = -scrollYOffset;
 
@@ -3612,6 +3615,21 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             if (folderId != 0) {
                 actionBar.setTitle(getString(R.string.ArchivedChats));
+            } else if (getStoriesController().hasOnlySelfStories() && getStoriesController().hasUploadingStories(UserConfig.getInstance(currentAccount).getClientUserId())) {
+                String str = LocaleController.getString(R.string.UploadingStory);
+                int index = str.indexOf("…");
+                if (index > 0) {
+                    if (uploadingString == null) {
+                        SpannableStringBuilder spannableStringBuilder = SpannableStringBuilder.valueOf(str);
+                        UploadingDotsSpannable dotsSpannable = new UploadingDotsSpannable();
+                        spannableStringBuilder.setSpan(dotsSpannable, spannableStringBuilder.length() - 1, spannableStringBuilder.length(), 0);
+                        dotsSpannable.setParent(actionBar.getTitleTextView(), true);
+                        uploadingString = spannableStringBuilder;
+                    }
+                    actionBar.setTitle(uploadingString);
+                } else {
+                    actionBar.setTitle(str);
+                }
             } else {
                 statusDrawable = new AnimatedEmojiDrawable.SwapAnimatedEmojiDrawable(null, dp(26));
                 statusDrawable.center = true;
