@@ -7840,10 +7840,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     fragmentSearchField.editText.setText(str);
                     fragmentSearchField.editText.setSelection(str.length());
                 } else if (!str.equals("section")) {
-                    NewContactBottomSheet activity = new NewContactBottomSheet(DialogsActivity.this, getContext());
+                    NewContactActivity activity = new NewContactActivity();
                     activity.setInitialPhoneNumber(str, true);
-//                    presentFragment(activity);
-                    activity.show();
+                    presentFragment(activity);
                 }
             } else if (obj instanceof ContactsController.Contact) {
                 ContactsController.Contact contact = (ContactsController.Contact) obj;
