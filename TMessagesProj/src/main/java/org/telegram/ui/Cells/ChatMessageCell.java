@@ -901,7 +901,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         public int selectorDrawableColor;
         public Drawable selectorDrawable;
         public PollButtonDrawable pollButtonDrawable;
-        
+
         private AvatarDrawable avatarDrawable;
         private ImageReceiver avatarImageReceiver;
 
@@ -3454,7 +3454,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
         }
 
-        
+
         if (action == MotionEvent.ACTION_DOWN) {
             pollMediaPressedIndex = PollAttachedMediaPack.INDEX_NONE;
             if (pollContentDrawable != null && pollContentDrawable.isHasMedia() && pollContentDrawable.getBounds().contains(x, y)) {
@@ -7245,6 +7245,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 hasEmbed = hasLinkPreview && !TextUtils.isEmpty(webpage.embed_url) && !messageObject.isGif() && !"instagram".equalsIgnoreCase(siteName);
                 boolean slideshow = false;
                 String webpageType = webpage != null ? webpage.type : null;
+                if (hasLinkPreview && messageObject.isIncomingLinksBlocked() && !MessageObject.isInternalTelegramWebpageType(webpageType)) {
+                    hasLinkPreview = false;
+                    webpage = null;
+                    siteName = null;
+                    hasEmbed = false;
+                    drawInstantView = false;
+                    webpageType = null;
+                }
                 TLRPC.Document androidThemeDocument = null;
                 TL_stories.StoryItem storyItem = null;
                 TLRPC.ThemeSettings androidThemeSettings = null;
@@ -28722,8 +28730,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     private TL_stars.StarGift instantViewTypeIsGiftAuction;
 
-    
-    
+
+
     private static boolean isSmallImageLinkPreviewType(String type) {
         return "app".equals(type) || "profile".equals(type) ||
                 "article".equals(type) || "telegram_bot".equals(type) ||
@@ -28731,7 +28739,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 "telegram_megagroup".equals(type) || "telegram_voicechat".equals(type) || "telegram_videochat".equals(type) ||
                 "telegram_livestream".equals(type) || "telegram_channel_boost".equals(type) || "telegram_group_boost".equals(type);
     }
-    
+
     private static void normalizePollPercents(boolean hasDifferent, int restPercent, ArrayList<PollButton> sortedPollButtons) {
         if (!hasDifferent || restPercent == 0 || sortedPollButtons == null || sortedPollButtons.isEmpty()) {
             return;
