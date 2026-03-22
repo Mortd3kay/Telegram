@@ -3187,7 +3187,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
                     int paddingTop;
                     int paddingBottom;
-                    if (!hasMainTabs && (isInLandscapeMode || AndroidUtilities.isTablet())) {
+                    if (shouldUseCompactProfileListPadding()) {
                         paddingTop = getHeaderExtraHeight();
                         paddingBottom = 0;
                     } else {
@@ -4160,7 +4160,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (action == MotionEvent.ACTION_MOVE) {
                     final int actionBarHeight = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
                     final float fullExtraHeight;
-                    if (isInLandscapeMode && !hasMainTabs) {
+                    if (shouldUseCompactProfileListPadding()) {
                         fullExtraHeight = getHeaderExtraHeight() + actionBarHeight;
                     } else {
                         fullExtraHeight = listView.getMeasuredWidth() + getActionsExtraHeight();
@@ -5996,6 +5996,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         if (userId != 0 && imageUpdater != null && !myProfile)
             return 0;
         return dp(74 + (withMusic && hasMusic ? 25 : 0));
+    }
+
+    private boolean shouldUseCompactProfileListPadding() {
+        return (isInLandscapeMode || AndroidUtilities.isTablet()) && (!hasMainTabs || isInLandscapeMode);
     }
 
     private int getHeaderExtraHeight() {
