@@ -17,7 +17,6 @@ import static org.telegram.messenger.LocaleController.formatSpannable;
 import static org.telegram.messenger.LocaleController.formatString;
 import static org.telegram.messenger.LocaleController.getString;
 
-import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
@@ -292,6 +291,7 @@ public class MessageObject {
     public boolean preview;
     public boolean previewForward;
     public boolean sentHighQuality;
+    private boolean linksEnabled = true;
 
     public boolean notime;
 
@@ -7009,7 +7009,7 @@ public class MessageObject {
         if (linkDescription != null) {
             return;
         }
-        boolean blockIncomingLinks = shouldBlockIncomingLinks();
+        boolean blockIncomingLinks = isIncomingLinksBlocked();
         boolean allowUsernames = false;
         int hashtagsType = 0;
         TLRPC.WebPage webpage = null;
@@ -7198,7 +7198,7 @@ public class MessageObject {
             captionSummarized = false;
             captionTranslated = false;
         }
-        boolean blockIncomingLinks = shouldBlockIncomingLinks();
+        boolean blockIncomingLinks = isIncomingLinksBlocked();
         if (!isMediaEmpty() && !(getMedia(messageOwner) instanceof TLRPC.TL_messageMediaGame) && !TextUtils.isEmpty(text)) {
             caption = Emoji.replaceEmoji(text, Theme.chat_msgTextPaint.getFontMetricsInt(), false);
             caption = replaceAnimatedEmoji(caption, entities, Theme.chat_msgTextPaint.getFontMetricsInt(), false);
@@ -8103,7 +8103,7 @@ public class MessageObject {
     private boolean applyEntities() {
         generateLinkDescription();
         spoilLoginCode();
-        boolean blockIncomingLinks = shouldBlockIncomingLinks();
+        boolean blockIncomingLinks = isIncomingLinksBlocked();
 
         boolean hasEntities;
         if (messageOwner.send_state != MESSAGE_SEND_STATE_SENT) {
@@ -8146,20 +8146,31 @@ public class MessageObject {
         return addEntitiesToText(messageText, false, useManualParse, blockIncomingLinks);
     }
 
-    private boolean shouldBlockIncomingLinks() {
-        if (isOutOwner()) {
-            return false;
-        }
-        long dialogId = getDialogId();
-        if (dialogId == 0) {
-            return false;
-        }
-        SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
-        return preferences.getBoolean("dialog_bar_block" + dialogId, false);
+    public boolean isIncomingLinksBlocked() {
+        return !linksEnabled && !isOutOwner();
     }
 
-    public boolean isIncomingLinksBlocked() {
-        return shouldBlockIncomingLinks();
+    public boolean setLinksEnabled(boolean enabled) {
+        if (linksEnabled == enabled) {
+            return false;
+        }
+        linksEnabled = enabled;
+        if (messageOwner != null && !isOutOwner()) {
+            forceUpdate = true;
+            applyNewText();
+            updateTranslation(true);
+            caption = null;
+            linkDescription = null;
+            resetLayout();
+            generateCaption();
+            generateLinkDescription();
+            checkLayout();
+        }
+        return true;
+    }
+
+    public boolean isLinksEnabled() {
+        return linksEnabled;
     }
 
     public static boolean isInternalTelegramWebpageType(String type) {

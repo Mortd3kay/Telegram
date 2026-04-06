@@ -825,7 +825,7 @@ public class ChatActivity extends BaseFragment implements
     private boolean scrollToTopOnResume;
     private boolean forceScrollToTop;
     private boolean scrollToTopUnReadOnResume;
-    private int lastKnownDialogBarBlockState = -1;
+    private Boolean lastKnownLinksEnabled;
     private long dialog_id;
     private Long dialog_id_Long;
     private int lastLoadIndex = 1;
@@ -3695,16 +3695,6 @@ public class ChatActivity extends BaseFragment implements
         } else {
             actionBar.setBackButtonDrawable(new BackDrawable(isReport()));
         }
-        actionBar.setOnLongClickListener(v -> {
-            if (BuildVars.DEBUG_VERSION) {
-                SharedPreferences prefs = MessagesController.getNotificationsSettings(currentAccount);
-                boolean prev = prefs.getBoolean("dialog_bar_block" + dialog_id, false);
-                prefs.edit().putBoolean("dialog_bar_block" + dialog_id, !prev).commit();
-                rebuildMessagesWithLink(true);
-                return true;
-            }
-            return false;
-        });
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
             public void onItemClick(final int id) {
@@ -9553,7 +9543,6 @@ public class ChatActivity extends BaseFragment implements
         reportSpamButton.setOnClickListener(v2 -> AlertsCreator.showBlockReportSpamAlert(ChatActivity.this, dialog_id, currentUser, currentChat, currentEncryptedChat, reportSpamButton.getTag(R.id.object_tag) != null, chatInfo, param -> {
             if (param == 0) {
                 updateTopPanel(true);
-                rebuildMessagesWithLink(true);
             } else {
                 finishFragment();
             }
@@ -9593,7 +9582,6 @@ public class ChatActivity extends BaseFragment implements
                 editor.putBoolean("dialog_bar_report" + dialog_id, false);
                 editor.commit();
                 updateTopPanel(false);
-                rebuildMessagesWithLink(true);
                 getNotificationsController().clearDialogNotificationsSettings(dialog_id, getTopicId());
             } else if (addToContactsButton.getTag() != null && (Integer) addToContactsButton.getTag() == 4) {
                 if (chatInfo != null && chatInfo.participants != null) {
@@ -11065,34 +11053,12 @@ public class ChatActivity extends BaseFragment implements
         translateItem.setVisibility(getMessagesController().getTranslateController().isTranslateDialogHidden(getDialogId()) && getMessagesController().getTranslateController().isDialogTranslatable(getDialogId()) ? View.VISIBLE : View.GONE);
     }
 
-    private void rebuildMessagesWithLink(boolean force) {
-        boolean currentDialogBarBlock = MessagesController.getNotificationsSettings(currentAccount).getBoolean("dialog_bar_block" + dialog_id, false);
-        if (!force && lastKnownDialogBarBlockState < 0) {
-            lastKnownDialogBarBlockState = currentDialogBarBlock ? 1 : 0;
+    private void rebuildMessagesWithLink() {
+        boolean incomingLinksEnabled = !isCurrentDialogLinksBlocked();
+        if (lastKnownLinksEnabled != null && lastKnownLinksEnabled == incomingLinksEnabled) {
             return;
         }
-        if (!force && lastKnownDialogBarBlockState == (currentDialogBarBlock ? 1 : 0)) {
-            return;
-        }
-        rebuildMessageArray(messages);
-        if (chatAdapter != null) {
-            rebuildMessageArray(chatAdapter.filteredMessages);
-            rebuildMessageArray(chatAdapter.frozenMessages);
-        }
-        if (filteredMessagesDict != null) {
-            for (int i = 0; i < filteredMessagesDict.size(); i++) {
-                rebuildMessageObject(filteredMessagesDict.valueAt(i));
-            }
-        }
-        for (int i = 0; i < messagesDict.length; i++) {
-            SparseArray<MessageObject> dict = messagesDict[i];
-            if (dict == null) {
-                continue;
-            }
-            for (int j = 0; j < dict.size(); j++) {
-                rebuildMessageObject(dict.valueAt(j));
-            }
-        }
+        lastKnownLinksEnabled = incomingLinksEnabled;
         if (chatAdapter != null) {
             chatAdapter.notifyDataSetChanged(true);
         }
@@ -11100,7 +11066,6 @@ public class ChatActivity extends BaseFragment implements
         if (chatListView != null) {
             chatListView.invalidate();
         }
-        lastKnownDialogBarBlockState = currentDialogBarBlock ? 1 : 0;
         try {
             fragmentView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
         } catch (Exception e) {
@@ -11109,28 +11074,38 @@ public class ChatActivity extends BaseFragment implements
     }
 
 
-    private void rebuildMessageArray(ArrayList<MessageObject> array) {
-        if (array == null) {
-            return;
+    private boolean isCurrentDialogLinksBlocked() {
+        SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
+        long did = dialog_id;
+        boolean show;
+        if (currentEncryptedChat != null) {
+            show = !(currentEncryptedChat.admin_id == getUserConfig().getClientUserId() || getContactsController().isLoadingContacts()) &&
+                    currentUser != null &&
+                    getContactsController().contactsDict.get(currentUser.id) == null;
+            did = currentUser != null ? currentUser.id : did;
+            int vis = preferences.getInt("dialog_bar_vis3" + did, 0);
+            if (show && (vis == 1 || vis == 3)) {
+                show = false;
+            }
+        } else {
+            show = preferences.getInt("dialog_bar_vis3" + did, 0) == 2 || DEBUG_TOP_PANELS;
         }
-        for (int i = 0; i < array.size(); i++) {
-            rebuildMessageObject(array.get(i));
+        boolean showReport = preferences.getBoolean("dialog_bar_report" + did, false) || DEBUG_TOP_PANELS;
+        boolean showBlock = preferences.getBoolean("dialog_bar_block" + did, false) || DEBUG_TOP_PANELS;
+        boolean reportSpamVisible = show && (showReport || showBlock);
+        String chatWithAdmin = preferences.getString("dialog_bar_chat_with_admin_title" + did, null);
+        if ((currentUser != null && !TextUtils.isEmpty(chatWithAdmin)) || UserObject.isBotForum(currentUser)) {
+            reportSpamVisible = false;
         }
+        return !(currentUser != null && currentUser.contact || !reportSpamVisible);
     }
 
-    private void rebuildMessageObject(MessageObject messageObject) {
-        if (messageObject == null || messageObject.isOutOwner()) {
-            return;
+    private boolean enableIncomingLinks(MessageObject messageObject) {
+        if (messageObject == null) {
+            return false;
         }
-        messageObject.forceUpdate = true;
-        messageObject.applyNewText();
-        messageObject.updateTranslation(true);
-        messageObject.caption = null;
-        messageObject.linkDescription = null;
-        messageObject.resetLayout();
-        messageObject.generateCaption();
-        messageObject.generateLinkDescription();
-        messageObject.checkLayout();
+        boolean incomingLinksEnabled = !isCurrentDialogLinksBlocked();
+        return messageObject.setLinksEnabled(messageObject.isOutOwner() || incomingLinksEnabled);
     }
 
     private Animator infoTopViewAnimator;
@@ -28938,6 +28913,7 @@ public class ChatActivity extends BaseFragment implements
         }
 
         topPanelLayout.setViewVisible(topChatPanelView, show, animated);
+        rebuildMessagesWithLink();
 
         checkListViewPaddings();
     }
@@ -29076,7 +29052,7 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onResume() {
         super.onResume();
-        rebuildMessagesWithLink(false);
+        rebuildMessagesWithLink();
         checkShowBlur(false);
         activityResumeTime = System.currentTimeMillis();
         if (openImport && getSendMessagesHelper().getImportingHistory(dialog_id) != null) {
@@ -36587,6 +36563,12 @@ public class ChatActivity extends BaseFragment implements
                             boolean wasPinnedTop = pinnedTop;
                             pinnedTop = pinnedBottom;
                             pinnedBottom = wasPinnedTop;
+                        }
+                    }
+                    enableIncomingLinks(message);
+                    if (groupedMessages != null) {
+                        for (int i = 0; i < groupedMessages.messages.size(); ++i) {
+                            enableIncomingLinks(groupedMessages.messages.get(i));
                         }
                     }
                     messageCell.setShowTopic(true);

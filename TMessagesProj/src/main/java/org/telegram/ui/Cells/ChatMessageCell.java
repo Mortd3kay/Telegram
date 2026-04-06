@@ -7245,7 +7245,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 hasEmbed = hasLinkPreview && !TextUtils.isEmpty(webpage.embed_url) && !messageObject.isGif() && !"instagram".equalsIgnoreCase(siteName);
                 boolean slideshow = false;
                 String webpageType = webpage != null ? webpage.type : null;
-                if (hasLinkPreview && messageObject.isIncomingLinksBlocked() && !MessageObject.isInternalTelegramWebpageType(webpageType)) {
+                if (hasLinkPreview && !messageObject.isLinksEnabled() && !MessageObject.isInternalTelegramWebpageType(webpageType)) {
                     hasLinkPreview = false;
                     webpage = null;
                     siteName = null;
