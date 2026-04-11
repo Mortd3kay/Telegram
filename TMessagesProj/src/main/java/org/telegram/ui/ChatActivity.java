@@ -6849,8 +6849,6 @@ public class ChatActivity extends BaseFragment implements
         });
 
         contentView.addView(chatListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        contentView.addView(topPanelLayoutFade, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 120, Gravity.LEFT | Gravity.TOP));
-
 
         if (getDialogId() != getUserConfig().getClientUserId()) {
             selectionReactionsOverlay = new ChatSelectionReactionMenuOverlay(this, context);
@@ -6978,6 +6976,7 @@ public class ChatActivity extends BaseFragment implements
         floatingDateView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         floatingDateView.setInvalidateColors(true);
         contentView.addView(floatingDateView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 4, 0, 0));
+        contentView.addView(topPanelLayoutFade, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 120, Gravity.LEFT | Gravity.TOP));
         floatingDateView.setOnActionClickListener(view -> {
             if (floatingDateView.getAlpha() == 0 || actionBar.isActionModeShowed() || isReport()) {
                 return;
@@ -7932,9 +7931,6 @@ public class ChatActivity extends BaseFragment implements
 
         chatInputBubbleContainer.addView(chatActivityEnterView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.BOTTOM, 7, 0, 7, 0));
 
-        int chatListIndex = contentView.indexOfChild(chatListView);
-        chatListIndex = chatListIndex < 0 ? contentView.getChildCount() : (chatListIndex + 1);
-
         roundVideoRecordBackground = new View(context);
         roundVideoRecordBackground.setVisibility(View.GONE);
         BlurredBackgroundDrawable d = navbarContentDrawableFactory.create(roundVideoRecordBackground);
@@ -7942,7 +7938,7 @@ public class ChatActivity extends BaseFragment implements
         roundVideoRecordBackground.setBackground(d);
 
         contentView.addView(roundVideoRecordBackground, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        contentView.addView(chatInputViewsContainer.getFadeView(), chatListIndex, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+        contentView.addView(chatInputViewsContainer.getFadeView(), LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         contentView.addView(chatInputViewsContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         if (chatMode != MODE_EDIT_BUSINESS_LINK) {
@@ -19758,7 +19754,7 @@ public class ChatActivity extends BaseFragment implements
                 object.viewX = coords[0];
                 object.viewY = coords[1] - 0 + view.getPaddingTop();
                 object.parentView = chatListView;
-                object.animatingImageView = null;
+                object.animatingImageView = animatingImageView;
                 object.imageReceiver = imageReceiver;
                 if (needPreview) {
                     object.thumb = imageReceiver.getBitmapSafe();
@@ -19767,12 +19763,6 @@ public class ChatActivity extends BaseFragment implements
                 if (view instanceof ChatActionCell && currentChat != null) {
                     object.dialogId = -currentChat.id;
                 }
-                object.clipTopAddition = (int) (chatListViewPaddingTop - chatListViewPaddingVisibleOffset - AndroidUtilities.dp(4));
-                object.clipBottomAddition = (int) (blurredViewBottomOffset
-                    + dp(9)
-                    + windowInsetsStateHolder.getAnimatedMaxBottomInset()
-                    + getTopicTabsSideSize(TopicsTabsView.Position.BOTTOM)
-                    + inputIslandHeightCurrent);
                 return object;
             }
         }
