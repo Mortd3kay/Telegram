@@ -44,7 +44,6 @@ import android.window.OnBackInvokedDispatcher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
-import androidx.core.math.MathUtils;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.viewpager.widget.ViewPager;
@@ -69,11 +68,9 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.pip.PipSource;
 import org.telegram.messenger.pip.source.IPipSourceDelegate;
-import org.telegram.messenger.pip.utils.PipPermissions;
 import org.telegram.messenger.pip.utils.PipUtils;
 import org.telegram.messenger.support.LongSparseIntArray;
 import org.telegram.messenger.video.VideoPlayerHolderBase;
-import org.telegram.messenger.voip.VoIPService;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_stories;
 import org.telegram.ui.ActionBar.AdjustPanLayoutHelper;
@@ -83,12 +80,12 @@ import org.telegram.ui.ArticleViewer;
 import org.telegram.ui.Cells.ChatActionCell;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.Bulletin;
+import org.telegram.ui.Components.ClippingImageView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RadialProgress;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SizeNotifierFrameLayout;
-import org.telegram.ui.Stories.LiveStoryPipOverlay;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.Stories.recorder.LivePlayerView;
 
@@ -657,6 +654,8 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                             float alpha = 1f - Utilities.clamp(((1f - progressToOpen) - startAlpha) / (endAlpha - startAlpha), 1f, 0f);
                             progressToCircle = Utilities.clamp(progressToCircle - 0.05f * (1f - alpha), 1f, 0);
                             containerView.setAlpha(alpha);
+                        } else if (transitionViewHolder.animatingImageView != null) {
+                            containerView.setAlpha(progress2);
                         } else {
                             containerView.setAlpha(1f);
                         }
@@ -742,23 +741,28 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                                         swipeToDismissOffset + containerView.getBottom() - (containerView.getHeight() - page.getBottom()) - (page.getHeight() - page.storyContainer.getBottom())
                                 );
                                 lerp(rect1, rect2, progress2, rect3);
-                                float x = transitionViewHolder.storyImage.getImageX();
-                                float y = transitionViewHolder.storyImage.getImageY();
-                                float w = transitionViewHolder.storyImage.getImageWidth();
-                                float h = transitionViewHolder.storyImage.getImageHeight();
-                                transitionViewHolder.storyImage.setImageCoords(rect3);
-                                transitionViewHolder.storyImage.setAlpha(1f - progress2);
-                                transitionViewHolder.storyImage.setVisible(true, false);
+
+                                if (transitionViewHolder.animatingImageView != null) {
+                                    updateAnimatingImageView(progress2);
+                                } else {
+                                    float x = transitionViewHolder.storyImage.getImageX();
+                                    float y = transitionViewHolder.storyImage.getImageY();
+                                    float w = transitionViewHolder.storyImage.getImageWidth();
+                                    float h = transitionViewHolder.storyImage.getImageHeight();
+                                    transitionViewHolder.storyImage.setImageCoords(rect3);
+                                    transitionViewHolder.storyImage.setAlpha(1f - progress2);
+                                    transitionViewHolder.storyImage.setVisible(true, false);
+                                    transitionViewHolder.storyImage.setVisible(wasVisible, false);
+                                    transitionViewHolder.storyImage.setImageCoords(x, y, w, h);
+                                }
+
                                 int r = canvas.getSaveCount();
                                 if (transitionViewHolder.drawClip != null) {
                                     transitionViewHolder.drawClip.clip(canvas, rect3, 1f - progress2, opening);
                                 }
-                                transitionViewHolder.storyImage.draw(canvas);
-                                if (transitionViewHolder.drawAbove != null) {
-                                    transitionViewHolder.drawAbove.draw(canvas, rect3, 1f - progress2, opening);
+                                if (transitionViewHolder.animatingImageView == null) {
+                                    transitionViewHolder.storyImage.draw(canvas);
                                 }
-                                transitionViewHolder.storyImage.setVisible(wasVisible, false);
-                                transitionViewHolder.storyImage.setImageCoords(x, y, w, h);
                                 canvas.restoreToCount(r);
                             }
                         }
@@ -2106,6 +2110,7 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                 if (transitionViewHolder.storyImage != null) {
                     transitionViewHolder.storyImage.setVisible(false, true);
                 }
+                prepareAnimatingImageView(1f);
             });
         }
     }
@@ -2137,10 +2142,19 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             if (placeProvider.findView(did, messageId, storyId, storyItem == null ? -1 : storyItem.messageType, transitionViewHolder)) {
                 transitionViewHolder.storyId = storyId;
                 if (transitionViewHolder.view != null) {
+                    int[] overlayOrigin = new int[2];
+                    boolean hasOverlayOrigin = windowView != null;
+                    if (hasOverlayOrigin) {
+                        windowView.getLocationOnScreen(overlayOrigin);
+                    }
                     int[] loc = new int[2];
                     transitionViewHolder.view.getLocationOnScreen(loc);
                     if (transitionViewHolder.view instanceof ChatMessageCell) {
                         loc[1] += transitionViewHolder.view.getPaddingTop();
+                    }
+                    if (hasOverlayOrigin) {
+                        loc[0] -= overlayOrigin[0];
+                        loc[1] -= overlayOrigin[1];
                     }
                     fromXCell = loc[0];
                     fromYCell = loc[1];
@@ -2179,8 +2193,14 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                     if (transitionViewHolder.clipTop == 0 && transitionViewHolder.clipBottom == 0) {
                         clipBottom = clipTop = 0;
                     } else {
-                        clipTop = loc[1] + transitionViewHolder.clipTop;
-                        clipBottom = loc[1] + transitionViewHolder.clipBottom;
+                        float clipTopScreen = loc[1] + transitionViewHolder.clipTop;
+                        float clipBottomScreen = loc[1] + transitionViewHolder.clipBottom;
+                        if (hasOverlayOrigin) {
+                            clipTopScreen -= overlayOrigin[1];
+                            clipBottomScreen -= overlayOrigin[1];
+                        }
+                        clipTop = clipTopScreen;
+                        clipBottom = clipBottomScreen;
                     }
                 } else {
                     animateAvatar = false;
@@ -2194,6 +2214,154 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             animateAvatar = false;
             fromX = fromY = 0;
         }
+        if (fromX == 0 && fromY == 0) {
+            clearAnimatingImageView();
+        }
+    }
+
+    private void prepareAnimatingImageView(float initialProgress) {
+        final ClippingImageView animatingImageView = transitionViewHolder.animatingImageView;
+        final ImageReceiver storyImage = transitionViewHolder.storyImage;
+        if (animatingImageView == null || storyImage == null) {
+            clearAnimatingImageView();
+            return;
+        }
+
+        final ImageReceiver.BitmapHolder bitmapHolder = storyImage.getBitmapSafe();
+        RectF drawRegion = storyImage.getDrawRegion();
+        float left = drawRegion.left;
+        float top = drawRegion.top;
+        int layoutWidth = Math.round(drawRegion.width());
+        int layoutHeight = Math.round(drawRegion.height());
+        if (layoutWidth <= 0 || layoutHeight <= 0) {
+            layoutWidth = Math.max(1, Math.round(storyImage.getImageWidth()));
+            layoutHeight = Math.max(1, Math.round(storyImage.getImageHeight()));
+            left = storyImage.getImageX();
+            top = storyImage.getImageY();
+        }
+        if (bitmapHolder == null || bitmapHolder.isRecycled()) {
+            clearAnimatingImageView();
+            transitionViewHolder.animatingImageView = null;
+            return;
+        }
+
+        int[] viewLoc = new int[2];
+        transitionViewHolder.view.getLocationInWindow(viewLoc);
+        float storyX = viewLoc[0];
+        float storyY = viewLoc[1];
+
+        float cellScale = 1f;
+        if (transitionViewHolder.params != null) {
+            cellScale = transitionViewHolder.params.getScale();
+        }
+
+        ViewGroup.LayoutParams lp = animatingImageView.getLayoutParams();
+        lp.width = layoutWidth;
+        lp.height = layoutHeight;
+        animatingImageView.setLayoutParams(lp);
+
+        int clipHorizontal = (int) Math.abs(left - storyImage.getImageX());
+        int clipVertical = (int) Math.abs(top - storyImage.getImageY());
+        if (storyImage.isAspectFit()) {
+            clipHorizontal = 0;
+        }
+
+        int clipTop = clipVertical;
+        int clipBottom = clipVertical;
+        View parentView = transitionViewHolder.clipParent != null ? transitionViewHolder.clipParent : (transitionViewHolder.view.getParent() instanceof View ? (View) transitionViewHolder.view.getParent() : null);
+        if (parentView != null) {
+            int[] coords2 = new int[2];
+            parentView.getLocationInWindow(coords2);
+            int ct = (int) (coords2[1] - (viewLoc[1] + top));
+            if (ct < 0) {
+                ct = 0;
+            }
+            int cb = (int) (viewLoc[1] + top + layoutHeight - (coords2[1] + parentView.getHeight()));
+            if (cb < 0) {
+                cb = 0;
+            }
+            clipTop = Math.max(ct, clipVertical);
+            clipBottom = Math.max(cb, clipVertical);
+        }
+
+        int orientation = storyImage.getOrientation();
+        int animatedOrientation = storyImage.getAnimatedOrientation();
+        if (animatedOrientation != 0) {
+            orientation = animatedOrientation;
+        }
+        animatingImageView.setOrientation(orientation, storyImage.getInvert());
+
+        float[][] animValues = new float[2][13];
+
+        animValues[0][0] = 1f;
+        animValues[0][1] = 1f;
+        animValues[0][2] = storyX - transitionViewHolder.animatingImageViewXOffset + left * cellScale;
+        animValues[0][3] = storyY - transitionViewHolder.animatingImageViewYOffset + top * cellScale;
+        animValues[0][4] = clipHorizontal * cellScale;
+        animValues[0][5] = clipTop * cellScale;
+        animValues[0][6] = clipBottom * cellScale;
+        int[] rad = storyImage.getRoundRadius(true);
+        for (int a = 0; a < 4; a++) {
+            animValues[0][7 + a] = rad != null && a < rad.length ? rad[a] : 0;
+        }
+        animValues[0][11] = clipVertical * cellScale;
+        animValues[0][12] = clipHorizontal * cellScale;
+
+        float ox = transitionViewHolder.animatingImageViewXOffset;
+        float oy = transitionViewHolder.animatingImageViewYOffset;
+        float screenW = AndroidUtilities.displaySize.x;
+        float screenH = AndroidUtilities.displaySize.y + AndroidUtilities.statusBarHeight;
+        float endScale = screenW / (float) layoutWidth;
+        float cx = screenW * 0.5f - ox;
+        float cy = screenH * 0.5f - oy;
+        if (initialProgress == 1f) {
+            cy += swipeToDismissOffset;
+        }
+        float endX = cx - layoutWidth * 0.5f;
+        float endY = cy - layoutHeight * 0.5f;
+
+        animValues[1][0] = endScale;
+        animValues[1][1] = endScale;
+        animValues[1][2] = endX;
+        animValues[1][3] = endY;
+        animValues[1][4] = 0f;
+        animValues[1][5] = 0f;
+        animValues[1][6] = 0f;
+        animValues[1][7] = 0f;
+        animValues[1][8] = 0f;
+        animValues[1][9] = 0f;
+        animValues[1][10] = 0f;
+        animValues[1][11] = 0f;
+        animValues[1][12] = 0f;
+
+        animatingImageView.setAnimationValues(animValues, false, true);
+        animatingImageView.setImageBitmap(bitmapHolder);
+        animatingImageView.setAnimationProgress(initialProgress);
+    }
+
+    private void updateAnimatingImageView(float alpha) {
+        final ClippingImageView animatingImageView = transitionViewHolder.animatingImageView;
+        if (animatingImageView == null) {
+            return;
+        }
+        final ViewGroup.LayoutParams layoutParams = animatingImageView.getLayoutParams();
+        if (layoutParams == null || layoutParams.width <= 0 || layoutParams.height <= 0) {
+            return;
+        }
+
+        animatingImageView.setAnimationProgress(alpha);
+        if (animatingImageView.getVisibility() != View.VISIBLE) {
+            animatingImageView.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void clearAnimatingImageView() {
+        final ClippingImageView animatingImageView = transitionViewHolder.animatingImageView;
+        if (animatingImageView == null) {
+            return;
+        }
+        animatingImageView.setVisibility(View.GONE);
+        animatingImageView.setImageBitmap(null);
     }
 
     private void requestAdjust(boolean nothing) {
@@ -2358,6 +2526,7 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
 
     private void startOpenAnimation() {
         updateTransitionParams();
+        prepareAnimatingImageView(0f);
         progressToOpen = 0f;
         setNavigationButtonsColor(true);
         foundViewToClose = false;
@@ -2409,6 +2578,7 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                     transitionViewHolder.storyImage.setVisible(true, true);
                     transitionViewHolder.storyImage = null;
                 }
+                clearAnimatingImageView();
                 final PeerStoriesView peerStoriesView = getCurrentPeerView();
                 if (peerStoriesView != null) {
                     peerStoriesView.updatePosition();
@@ -2496,6 +2666,7 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
         if (transitionViewHolder.storyImage != null) {
             transitionViewHolder.storyImage.setVisible(true, true);
         }
+        clearAnimatingImageView();
         transitionViewHolder.storyImage = null;
         transitionViewHolder.avatarImage = null;
         if (containerView != null) {
@@ -2546,6 +2717,7 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             if (transitionViewHolder.storyImage != null) {
                 transitionViewHolder.storyImage.setVisible(true, true);
             }
+            clearAnimatingImageView();
             transitionViewHolder.storyImage = null;
             transitionViewHolder.avatarImage = null;
         } else {
@@ -2580,6 +2752,7 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
                         transitionViewHolder.storyImage.setAlpha(1f);
                         transitionViewHolder.storyImage.setVisible(true, true);
                     }
+                    clearAnimatingImageView();
                     if (transitionViewHolder.radialProgressUpload != null) {
                         final PeerStoriesView peerStoriesView = getCurrentPeerView();
                         if (peerStoriesView != null && peerStoriesView.headerView.radialProgress != null) {
@@ -3087,6 +3260,9 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
         public View view;
         public ImageReceiver avatarImage;
         public ImageReceiver storyImage;
+        public ClippingImageView animatingImageView;
+        public float animatingImageViewXOffset;
+        public float animatingImageViewYOffset;
         public RadialProgress radialProgressUpload;
         public HolderDrawAbove drawAbove;
         public HolderClip drawClip;
@@ -3117,6 +3293,9 @@ public class StoryViewer implements NotificationCenter.NotificationCenterDelegat
             params = null;
             avatarImage = null;
             storyImage = null;
+            animatingImageView = null;
+            animatingImageViewXOffset = 0;
+            animatingImageViewYOffset = 0;
             drawAbove = null;
             drawClip = null;
             clipParent = null;

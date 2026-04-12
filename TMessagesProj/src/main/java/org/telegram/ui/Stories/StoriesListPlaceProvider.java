@@ -25,6 +25,7 @@ import org.telegram.ui.Cells.SharedPhotoVideoCell2;
 import org.telegram.ui.Cells.StatisticPostInfoCell;
 import org.telegram.ui.Cells.UserCell;
 import org.telegram.ui.Components.BlurredRecyclerView;
+import org.telegram.ui.Components.ClippingImageView;
 import org.telegram.ui.Components.RecyclerListView;
 
 public class StoriesListPlaceProvider implements StoryViewer.PlaceProvider {
@@ -39,9 +40,15 @@ public class StoriesListPlaceProvider implements StoryViewer.PlaceProvider {
     public boolean onlySelfStories;
     public boolean hasPaginationParams;
     public int addBottomClip;
+    private ClippingImageView animatingImageView;
 
     public StoriesListPlaceProvider addBottomClip(int x) {
         addBottomClip += x;
+        return this;
+    }
+
+    public StoriesListPlaceProvider withAnimatingImageView(ClippingImageView animatingImageView) {
+        this.animatingImageView = animatingImageView;
         return this;
     }
 
@@ -198,6 +205,13 @@ public class StoriesListPlaceProvider implements StoryViewer.PlaceProvider {
                     }
                     holder.view = child;
                     holder.storyImage = cell.imageReceiver;
+                    holder.animatingImageView = animatingImageView;
+                    if (animatingImageView != null) {
+                        final int[] animLoc = new int[2];
+                        recyclerListView.getLocationInWindow(animLoc);
+                        holder.animatingImageViewXOffset = animLoc[0];
+                        holder.animatingImageViewYOffset = animLoc[1];
+                    }
                     holder.drawAbove = (canvas, bounds, alpha, opening) -> {
                         cell.drawDuration(canvas, bounds, alpha);
                         cell.drawViews(canvas, bounds, alpha);

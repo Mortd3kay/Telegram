@@ -7819,11 +7819,13 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
                 if (storiesList == null) {
                     return;
                 }
-                profileActivity.getOrCreateStoryViewer().open(getContext(), message.getId(), storiesList, StoriesListPlaceProvider.of(mediaPages[a].listView).with(forward -> {
-                    if (forward) {
-                        storiesList.load(false, 30);
-                    }
-                }).addBottomClip(profileActivity instanceof ProfileActivity && ((ProfileActivity) profileActivity).myProfile ? dp(68) : 0));
+                profileActivity.getOrCreateStoryViewer().open(getContext(), message.getId(), storiesList, StoriesListPlaceProvider.of(mediaPages[a].listView)
+                    .withAnimatingImageView(mediaPages[a].animatingImageView)
+                    .with(forward -> {
+                        if (forward) {
+                            storiesList.load(false, 30);
+                        }
+                    }).addBottomClip(profileActivity instanceof ProfileActivity && ((ProfileActivity) profileActivity).myProfile ? dp(68) : 0));
             }
         }
         updateForwardItem();
@@ -11710,8 +11712,8 @@ public class SharedMediaLayout extends FrameLayout implements NotificationCenter
 
         @Override
         public void updateClip(int[] clip) {
-            clip[0] = getPaddingTop() - dp(2) - hintPaddingTop;
-            clip[1] = getMeasuredHeight() - getPaddingBottom() - hintPaddingBottom;
+            clip[0] = 0;
+            clip[1] = getMeasuredHeight();
         }
     }
 
