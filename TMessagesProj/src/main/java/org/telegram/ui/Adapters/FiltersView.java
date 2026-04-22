@@ -62,6 +62,7 @@ public class FiltersView extends RecyclerListView {
     public final static int FILTER_TYPE_VOICE = 5;
     public final static int FILTER_TYPE_DATE = 6;
     public final static int FILTER_TYPE_ARCHIVE = 7;
+    public final static int FILTER_TYPE_FOLDER = 8;
 
     public final static int FILTER_INDEX_MEDIA = 0;
     public final static int FILTER_INDEX_LINKS = 1;
@@ -680,7 +681,7 @@ public class FiltersView extends RecyclerListView {
                     }
                 } else if (oldItem.filterType == FILTER_TYPE_DATE) {
                     return oldItem.title.equals(newItem.title);
-                } else if (oldItem.filterType == FILTER_TYPE_ARCHIVE) {
+                } else if (oldItem.filterType == FILTER_TYPE_ARCHIVE || oldItem.filterType == FILTER_TYPE_FOLDER) {
                     return true;
                 }
             }
@@ -718,26 +719,22 @@ public class FiltersView extends RecyclerListView {
             setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(28), getThemedColor(Theme.key_groupcreate_spanBackground)));
             titleView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
             if (thumbDrawable != null) {
-                if (data.filterType == FILTER_TYPE_ARCHIVE) {
-                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_addButton), false);
-                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_buttonText), true);
-                } else {
-                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_addButton), false);
-                    Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_buttonText), true);
-                }
+                Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_addButton), false);
+                Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_buttonText), true);
             }
         }
 
         public void setData(MediaFilterData data) {
             this.data = data;
             avatarImageView.getImageReceiver().clearImage();
-            if (data.filterType == FILTER_TYPE_ARCHIVE) {
-                thumbDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), R.drawable.chats_archive);
+            if (data.filterType == FILTER_TYPE_ARCHIVE || data.filterType == FILTER_TYPE_FOLDER) {
+                int iconRes = data.filterType == FILTER_TYPE_FOLDER ? R.drawable.settings_folders : R.drawable.chats_archive;
+                thumbDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), iconRes);
                 thumbDrawable.setIconSize(AndroidUtilities.dp(16), AndroidUtilities.dp(16));
                 Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_addButton), false);
                 Theme.setCombinedDrawableColor(thumbDrawable, getThemedColor(Theme.key_featuredStickers_buttonText), true);
                 avatarImageView.setImageDrawable(thumbDrawable);
-                titleView.setText(data.title);
+                titleView.setText(data.getTitle());
                 return;
             }
             thumbDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), data.iconResFilled);
@@ -793,6 +790,7 @@ public class FiltersView extends RecyclerListView {
         public TLRPC.MessagesFilter filter;
         public TLObject chat;
         public DateData dateData;
+        public ArrayList<Long> folderDialogIds;
         public boolean removable = true;
 
         public MediaFilterData(ReactionsLayoutInBubble.VisibleReaction reaction) {

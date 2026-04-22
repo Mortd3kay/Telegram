@@ -2219,7 +2219,7 @@ public class ActionBarMenuItem extends FrameLayout {
             }
             avatarImageView.setAlpha(1f - selectedProgress);
 
-            if (data != null && (data.filterType == FiltersView.FILTER_TYPE_ARCHIVE)) {
+            if (data != null && (data.filterType == FiltersView.FILTER_TYPE_ARCHIVE || data.filterType == FiltersView.FILTER_TYPE_FOLDER)) {
                 setData(data);
             }
             invalidate();
@@ -2253,8 +2253,9 @@ public class ActionBarMenuItem extends FrameLayout {
                     avatarImageView.getImageReceiver().setRoundRadius(AndroidUtilities.dp(16));
                     avatarImageView.getImageReceiver().setForUserOrChat(chat, thumbDrawable);
                 }
-            } else if (data.filterType == FiltersView.FILTER_TYPE_ARCHIVE) {
-                CombinedDrawable combinedDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), R.drawable.chats_archive);
+            } else if (data.filterType == FiltersView.FILTER_TYPE_ARCHIVE || data.filterType == FiltersView.FILTER_TYPE_FOLDER) {
+                int iconRes = data.filterType == FiltersView.FILTER_TYPE_FOLDER ? R.drawable.settings_folders : R.drawable.chats_archive;
+                CombinedDrawable combinedDrawable = Theme.createCircleDrawableWithIcon(AndroidUtilities.dp(32), iconRes);
                 combinedDrawable.setIconSize(AndroidUtilities.dp(16), AndroidUtilities.dp(16));
                 Theme.setCombinedDrawableColor(combinedDrawable, getThemedColor(Theme.key_featuredStickers_addButton), false);
                 Theme.setCombinedDrawableColor(combinedDrawable, getThemedColor(Theme.key_featuredStickers_buttonText), true);

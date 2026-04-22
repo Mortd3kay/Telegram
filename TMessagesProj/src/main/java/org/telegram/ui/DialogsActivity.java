@@ -6520,6 +6520,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         boolean hasUserFilter = false;
         boolean hasDateFilter = false;
         boolean hasArchiveFilter = false;
+        boolean hasFolderFilter = false;
 
         ArrayList<FiltersView.MediaFilterData> currentSearchFilters = searchViewPager.getCurrentSearchFilters();
         for (int i = 0; i < currentSearchFilters.size(); i++) {
@@ -6531,10 +6532,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 hasDateFilter = true;
             } else if (currentSearchFilters.get(i).filterType == FiltersView.FILTER_TYPE_ARCHIVE) {
                 hasArchiveFilter = true;
+            } else if (currentSearchFilters.get(i).filterType == FiltersView.FILTER_TYPE_FOLDER) {
+                hasFolderFilter = true;
             }
         }
 
-        if (hasArchiveFilter) {
+        if (hasArchiveFilter || hasFolderFilter) {
             archive = false;
         }
 
@@ -7394,6 +7397,17 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             if (folderId != 0 && (rightSlidingDialogContainer == null || !rightSlidingDialogContainer.hasFragment())) {
                 FiltersView.MediaFilterData filterData = new FiltersView.MediaFilterData(R.drawable.chats_archive, R.string.ArchiveSearchFilter, null, FiltersView.FILTER_TYPE_ARCHIVE);
                 addSearchFilter(filterData);
+            } else if (viewPages != null && viewPages[0] != null && (viewPages[0].dialogsType == DIALOGS_TYPE_FOLDER1 || viewPages[0].dialogsType == DIALOGS_TYPE_FOLDER2) && (rightSlidingDialogContainer == null || !rightSlidingDialogContainer.hasFragment())) {
+                MessagesController.DialogFilter folderFilter = getMessagesController().selectedDialogFilter[viewPages[0].dialogsType == DIALOGS_TYPE_FOLDER1 ? 0 : 1];
+                if (folderFilter != null) {
+                    ArrayList<Long> folderDialogIds = new ArrayList<>();
+                    for (TLRPC.Dialog d : folderFilter.dialogs) {
+                        folderDialogIds.add(d.id);
+                    }
+                    FiltersView.MediaFilterData filterData = new FiltersView.MediaFilterData(R.drawable.settings_folders, folderFilter.name, null, FiltersView.FILTER_TYPE_FOLDER);
+                    filterData.folderDialogIds = folderDialogIds;
+                    addSearchFilter(filterData);
+                }
             }
         }
 
