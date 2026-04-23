@@ -7406,6 +7406,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     }
                     FiltersView.MediaFilterData filterData = new FiltersView.MediaFilterData(R.drawable.settings_folders, folderFilter.name, null, FiltersView.FILTER_TYPE_FOLDER);
                     filterData.folderDialogIds = folderDialogIds;
+                    filterData.folderFlags = folderFilter.flags;
                     addSearchFilter(filterData);
                 }
             }

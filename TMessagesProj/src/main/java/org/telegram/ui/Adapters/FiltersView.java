@@ -791,6 +791,7 @@ public class FiltersView extends RecyclerListView {
         public TLObject chat;
         public DateData dateData;
         public ArrayList<Long> folderDialogIds;
+        public int folderFlags;
         public boolean removable = true;
 
         public MediaFilterData(ReactionsLayoutInBubble.VisibleReaction reaction) {

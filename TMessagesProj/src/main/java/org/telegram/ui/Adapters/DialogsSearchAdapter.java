@@ -110,7 +110,11 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
     private Filter currentMessagesFilter = Filter.All;
     private boolean forceLoadingMessages;
     public void resetFilter() {
-        currentMessagesFilter = Filter.All;
+        if (lockMessagesFilterByFolderType) {
+            updateMessagesFilterLockByFolderType();
+        } else {
+            currentMessagesFilter = Filter.All;
+        }
     }
 
     private final Context mContext;
@@ -164,6 +168,8 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
     public View showMoreHeader;
     private Runnable cancelShowMoreAnimation;
     private ArrayList<Long> filterDialogIds;
+    private int filterDialogFlags;
+    private boolean lockMessagesFilterByFolderType;
     private final DialogsActivity dialogsActivity;
     private final Theme.ResourcesProvider resourcesProvider;
 
@@ -181,11 +187,41 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
     private int folderId;
     private ArrayList<ContactEntry> allContacts;
 
-    public void setFilterDialogIds(ArrayList<Long> filterDialogIds) {
+    public void setFilterDialogIds(ArrayList<Long> filterDialogIds, int filterDialogFlags) {
         if (this.filterDialogIds != filterDialogIds) {
             resetFilteredMessagesState();
         }
         this.filterDialogIds = filterDialogIds;
+        this.filterDialogFlags = filterDialogFlags;
+        updateMessagesFilterLockByFolderType();
+    }
+
+    public void setFilterDialogIds(ArrayList<Long> filterDialogIds) {
+        setFilterDialogIds(filterDialogIds, 0);
+    }
+
+    private void updateMessagesFilterLockByFolderType() {
+        if (filterDialogIds == null) {
+            lockMessagesFilterByFolderType = false;
+            currentMessagesFilter = Filter.All;
+            return;
+        }
+        int chatTypeFlags = filterDialogFlags & MessagesController.DIALOG_FILTER_FLAG_ALL_CHATS;
+        int usersFolderFlags = MessagesController.DIALOG_FILTER_FLAG_CONTACTS | MessagesController.DIALOG_FILTER_FLAG_NON_CONTACTS | MessagesController.DIALOG_FILTER_FLAG_BOTS;
+        boolean hasOnlyUserTypes = (chatTypeFlags & ~usersFolderFlags) == 0 && (chatTypeFlags & usersFolderFlags) != 0;
+        if (hasOnlyUserTypes) {
+            lockMessagesFilterByFolderType = true;
+            currentMessagesFilter = Filter.Private;
+        } else if (chatTypeFlags == MessagesController.DIALOG_FILTER_FLAG_GROUPS) {
+            lockMessagesFilterByFolderType = true;
+            currentMessagesFilter = Filter.Groups;
+        } else if (chatTypeFlags == MessagesController.DIALOG_FILTER_FLAG_CHANNELS) {
+            lockMessagesFilterByFolderType = true;
+            currentMessagesFilter = Filter.Channels;
+        } else {
+            lockMessagesFilterByFolderType = false;
+            currentMessagesFilter = Filter.All;
+        }
     }
 
     private int folderFilteredMessagesVisibleCount;
@@ -210,6 +246,19 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
 
     private MessageObject getVisibleSearchMessage(int index) {
         return getVisibleSearchMessagesList().get(index);
+    }
+
+    private boolean containsMessage(ArrayList<MessageObject> list, MessageObject msg) {
+        if (msg == null) {
+            return true;
+        }
+        for (int i = 0; i < list.size(); i++) {
+            MessageObject existing = list.get(i);
+            if (existing != null && existing.getId() == msg.getId() && existing.getDialogId() == msg.getDialogId()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean shouldRequestMoreFilteredMessages() {
@@ -676,6 +725,8 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                             resetFilteredMessagesState();
                         }
                         nextSearchRate = res.next_rate;
+                        boolean autoFillActive = filterDialogIds != null && locallyFilteredSearchResultMessages.size() < folderFilteredMessagesTargetCount;
+                        int filteredAddedInThisResponse = 0;
                         for (int a = 0; a < res.messages.size(); a++) {
                             TLRPC.Message message = res.messages.get(a);
                             long did = MessageObject.getDialogId(message);
@@ -699,7 +750,10 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                             }
                             searchResultMessages.add(msg);
                             if (filterDialogIds == null || filterDialogIds.contains(did)) {
-                                locallyFilteredSearchResultMessages.add(msg);
+                                if (!containsMessage(locallyFilteredSearchResultMessages, msg)) {
+                                    locallyFilteredSearchResultMessages.add(msg);
+                                    filteredAddedInThisResponse++;
+                                }
                             }
                             long dialog_id = MessageObject.getDialogId(message);
                             ConcurrentHashMap<Long, Integer> read_max = message.out ? MessagesController.getInstance(currentAccount).dialogs_read_outbox_max : MessagesController.getInstance(currentAccount).dialogs_read_inbox_max;
@@ -710,6 +764,9 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                         }
                         searchWas = true;
                         messagesSearchEndReached = res.messages.size() != 20;
+                        if (autoFillActive && !messagesSearchEndReached && filteredAddedInThisResponse == 0) {
+                            messagesSearchEndReached = true;
+                        }
                         if (filterDialogIds != null && (locallyFilteredSearchResultMessages.size() >= folderFilteredMessagesTargetCount || messagesSearchEndReached)) {
                             folderFilteredMessagesVisibleCount = locallyFilteredSearchResultMessages.size();
                         }
@@ -1784,6 +1841,9 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                 break;
             case VIEW_TYPE_EMPTY_RESULT:
                 view = messagesEmptyLayout = new EmptyLayout(mContext, resourcesProvider, () -> {
+                    if (lockMessagesFilterByFolderType) {
+                        return;
+                    }
                     currentMessagesFilter = Filter.All;
                     searchResultMessages.clear();
                     resetFilteredMessagesState();
@@ -1793,6 +1853,7 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                     loadMoreSearchMessages();
                 });
                 messagesEmptyLayout.setQuery(lastMessagesSearchString);
+                messagesEmptyLayout.setAllowSearchAll(!lockMessagesFilterByFolderType);
                 break;
             case VIEW_TYPE_ADD_BY_PHONE:
             default:
@@ -2183,29 +2244,31 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
                                 title = LocaleController.formatString(R.string.SearchMessagesIn, (chat == null ? "null" : chat.monoforum ? ForumUtilities.getMonoForumTitle(currentAccount, chat) : chat.title));
                             } else {
                                 messagesSectionPosition = position;
-                                customRightText = getFilterFromString(currentMessagesFilter);
-                                onClick = () -> {
-                                    ItemOptions o = ItemOptions.makeOptions(dialogsActivity, cell);
-                                    for (Filter f : Filter.values()) {
-                                        final boolean isCurrent = f.flags == currentMessagesFilter.flags;
-                                        o.addChecked(isCurrent, LocaleController.getString(f.strResId), () -> {
-                                            if (isCurrent) return;
-                                            cell.setRightText(getFilterFromString(currentMessagesFilter = f));
-                                            cell.setRightTextMargin(6);
-                                            searchResultMessages.clear();
-                                            resetFilteredMessagesState();
-                                            forceLoadingMessages = true;
-                                            notifyDataSetChanged();
-                                            loadMoreSearchMessages();
-                                        });
-                                    }
-                                    o
-                                        .setGravity(Gravity.RIGHT)
-                                        .setOnTopOfScrim()
-                                        .setDrawScrim(false)
-                                        .setDimAlpha(0)
-                                        .show();
-                                };
+                                if (!lockMessagesFilterByFolderType) {
+                                    customRightText = getFilterFromString(currentMessagesFilter);
+                                    onClick = () -> {
+                                        ItemOptions o = ItemOptions.makeOptions(dialogsActivity, cell);
+                                        for (Filter f : Filter.values()) {
+                                            final boolean isCurrent = f.flags == currentMessagesFilter.flags;
+                                            o.addChecked(isCurrent, LocaleController.getString(f.strResId), () -> {
+                                                if (isCurrent) return;
+                                                cell.setRightText(getFilterFromString(currentMessagesFilter = f));
+                                                cell.setRightTextMargin(6);
+                                                searchResultMessages.clear();
+                                                resetFilteredMessagesState();
+                                                forceLoadingMessages = true;
+                                                notifyDataSetChanged();
+                                                loadMoreSearchMessages();
+                                            });
+                                        }
+                                        o
+                                            .setGravity(Gravity.RIGHT)
+                                            .setOnTopOfScrim()
+                                            .setDrawScrim(false)
+                                            .setDimAlpha(0)
+                                            .show();
+                                    };
+                                }
                                 title = LocaleController.getString(R.string.SearchMessages);
                             }
                         }
@@ -2506,6 +2569,7 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
     private static class EmptyLayout extends LinearLayout {
 
         private TextView textView;
+        private TextView button;
         public EmptyLayout(Context context, Theme.ResourcesProvider resourcesProvider, Runnable onClickAll) {
             super(context);
 
@@ -2530,7 +2594,7 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
             textView.setGravity(Gravity.CENTER);
             addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 14));
 
-            TextView button = new TextView(context);
+            button = new TextView(context);
             button.setPadding(dp(12), dp(4), dp(12), dp(4));
             button.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             button.setText(LocaleController.getString(R.string.SearchMessagesFilterEmptySearchAll));
@@ -2543,6 +2607,12 @@ public class DialogsSearchAdapter extends RecyclerListView.SelectionAdapter {
         public void setQuery(String query) {
             textView.setText(LocaleController.formatString(R.string.SearchMessagesFilterEmptyText, query));
 
+        }
+
+        public void setAllowSearchAll(boolean allowSearchAll) {
+            if (button != null) {
+                button.setVisibility(allowSearchAll ? VISIBLE : GONE);
+            }
         }
 
     }

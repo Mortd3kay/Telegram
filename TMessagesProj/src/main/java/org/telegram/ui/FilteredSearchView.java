@@ -129,6 +129,8 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
     private int filteredMessagesVisibleCount;
     private int filteredMessagesTargetCount = 20;
     private boolean sourceEndReached;
+    private int filteredAutoLoadRequestsCount;
+    private static final int FILTERED_AUTOLOAD_REQUESTS_LIMIT = 20;
 
     public void setFolderDialogIds(ArrayList<Long> folderDialogIds) {
         this.folderDialogIds = folderDialogIds;
@@ -144,6 +146,17 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
         filteredMessagesVisibleCount = 0;
         filteredMessagesTargetCount = 20;
         sourceEndReached = false;
+        filteredAutoLoadRequestsCount = 0;
+    }
+
+    private boolean containsMessage(ArrayList<MessageObject> list, MessageObject messageObject) {
+        for (int i = 0; i < list.size(); i++) {
+            MessageObject existing = list.get(i);
+            if (existing.getId() == messageObject.getId() && existing.getDialogId() == messageObject.getDialogId()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void rebuildSectionsFromMessages() {
@@ -802,13 +815,20 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
                     int n = messageObjects.size();
                     boolean needMoreFilteredPages = false;
                     if (folderFilterActive) {
+                        int sourceSizeBefore = sourceMessages.size();
                         sourceEndReached = res.messages.size() != 20;
                         for (int i = 0; i < n; i++) {
                             MessageObject messageObject = messageObjects.get(i);
-                            sourceMessages.add(messageObject);
-                            if (currentFolderDialogIds.contains(messageObject.getDialogId())) {
+                            if (!containsMessage(sourceMessages, messageObject)) {
+                                sourceMessages.add(messageObject);
+                            }
+                            if (currentFolderDialogIds.contains(messageObject.getDialogId()) && !containsMessage(filteredMessagesBuffer, messageObject)) {
                                 filteredMessagesBuffer.add(messageObject);
                             }
+                        }
+                        int sourceAddedCount = sourceMessages.size() - sourceSizeBefore;
+                        if (!sourceEndReached && sourceAddedCount == 0) {
+                            sourceEndReached = true;
                         }
                         if (filteredMessagesBuffer.size() >= filteredMessagesTargetCount || sourceEndReached) {
                             filteredMessagesVisibleCount = filteredMessagesBuffer.size();
@@ -846,11 +866,23 @@ public class FilteredSearchView extends FrameLayout implements NotificationCente
                         endReached = messages.size() >= totalCount;
                     }
                     if (needMoreFilteredPages) {
-                        isLoading = true;
-                        emptyView.showProgress(true, true);
-                        search(currentSearchDialogId, currentSearchMinDate, currentSearchMaxDate, currentSearchFilter, currentIncludeFolder, lastMessagesSearchString, false);
-                        return;
+                        filteredAutoLoadRequestsCount++;
+                        if (filteredAutoLoadRequestsCount >= FILTERED_AUTOLOAD_REQUESTS_LIMIT) {
+                            sourceEndReached = true;
+                            filteredMessagesVisibleCount = filteredMessagesBuffer.size();
+                            messages.clear();
+                            messages.addAll(filteredMessagesBuffer);
+                            rebuildSectionsFromMessages();
+                            endReached = sourceEndReached && filteredMessagesVisibleCount >= filteredMessagesBuffer.size();
+                            needMoreFilteredPages = false;
+                        } else {
+                            isLoading = true;
+                            emptyView.showProgress(true, true);
+                            search(currentSearchDialogId, currentSearchMinDate, currentSearchMaxDate, currentSearchFilter, currentIncludeFolder, lastMessagesSearchString, false);
+                            return;
+                        }
                     }
+                    filteredAutoLoadRequestsCount = 0;
                     isLoading = false;
                     emptyView.showProgress(false);
 
