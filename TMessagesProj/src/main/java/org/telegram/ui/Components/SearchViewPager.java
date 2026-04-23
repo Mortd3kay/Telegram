@@ -155,11 +155,13 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
     SizeNotifierFrameLayout fragmentView;
 
     private final int folderId;
+    private final int initialDialogsType;
     int animateFromCount = 0;
 
     public SearchViewPager(Context context, DialogsActivity fragment, int type, int initialDialogsType, int folderId, ChatPreviewDelegate chatPreviewDelegate) {
         super(context);
         this.folderId = folderId;
+        this.initialDialogsType = initialDialogsType;
         parent = fragment;
         this.chatPreviewDelegate = chatPreviewDelegate;
 
@@ -662,6 +664,16 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         return false;
     }
 
+    public ArrayList<Long> getFolderDialogIds() {
+        for (int i = 0; i < currentSearchFilters.size(); i++) {
+            FiltersView.MediaFilterData data = currentSearchFilters.get(i);
+            if (data.filterType == FiltersView.FILTER_TYPE_FOLDER) {
+                return data.folderDialogIds;
+            }
+        }
+        return null;
+    }
+
     private void search(View view, int position, String query, boolean reset) {
         if (TextUtils.isEmpty(query)) {
             emptyView.subtitle.setVisibility(View.GONE);
@@ -674,6 +686,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         long minDate = 0;
         long maxDate = 0;
         boolean includeFolder = false;
+        ArrayList<Long> folderDialogIds = null;
         for (int i = 0; i < currentSearchFilters.size(); i++) {
             FiltersView.MediaFilterData data = currentSearchFilters.get(i);
             if (data.filterType == FiltersView.FILTER_TYPE_CHAT) {
@@ -687,6 +700,8 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                 maxDate = data.dateData.maxDate;
             } else if (data.filterType == FiltersView.FILTER_TYPE_ARCHIVE) {
                 includeFolder = true;
+            } else if (data.filterType == FiltersView.FILTER_TYPE_FOLDER) {
+                folderDialogIds = data.folderDialogIds;
             }
         }
 
@@ -716,6 +731,9 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
             hashtagSearchAdapter.search(query);
             hashtagEmptyView.setKeyboardHeight(keyboardSize, false);
         } else if (view == searchContainer) {
+            if (initialDialogsType != DialogsActivity.DIALOGS_TYPE_BOT_REQUEST_PEER) {
+                dialogsSearchAdapter.setFilterDialogIds(folderDialogIds);
+            }
             if (dialogId == 0 && minDate == 0 && maxDate == 0 || forumDialogId != 0) {
                 lastSearchScrolledToTop = false;
                 dialogsSearchAdapter.searchDialogs(query, includeFolder ? 1 : 0, true);
@@ -758,6 +776,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                     }
                     noMediaFiltersSearchView.animate().alpha(1f).setDuration(150).start();
                 }
+                noMediaFiltersSearchView.setFolderDialogIds(folderDialogIds);
                 noMediaFiltersSearchView.search(dialogId, minDate, maxDate, null, includeFolder, query, reset);
                 emptyView.setVisibility(View.GONE);
             }
@@ -766,6 +785,7 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
         } else if (view instanceof FilteredSearchView) {
             ((FilteredSearchView) view).setUseFromUserAsAvatar(forumDialogId != 0);
             ((FilteredSearchView) view).setKeyboardHeight(keyboardSize, false);
+            ((FilteredSearchView) view).setFolderDialogIds(folderDialogIds);
             ViewPagerAdapter.Item item = viewPagerAdapter.items.get(position);
             ((FilteredSearchView) view).search(dialogId, minDate, maxDate, FiltersView.filters[item.filterIndex], includeFolder, query, reset);
         } else if (view instanceof SearchDownloadsContainer) {
@@ -818,6 +838,9 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
             tabsView.scrollToTab(0, 0);
         }
         if (dialogsSearchAdapter != null) {
+            if (initialDialogsType != DialogsActivity.DIALOGS_TYPE_BOT_REQUEST_PEER) {
+                dialogsSearchAdapter.setFilterDialogIds(getFolderDialogIds());
+            }
             dialogsSearchAdapter.searchDialogs(lastSearchString, includeFolder() ? 1 : 0, true);
         }
     }
